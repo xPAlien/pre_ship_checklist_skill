@@ -5,149 +5,197 @@ description: "Security checklist for web applications before shipping to a clien
 
 # Vibe Coder Pre-Ship Security Checklist
 
-35 security checks across authentication, API security, database, infrastructure, and code hygiene. Run through every item before client delivery.
+36 security checks across authentication, API security, database, infrastructure, and code hygiene. Run through every item before client delivery.
 
 ---
 
 ## How to Use This Skill
 
-Present the checklist as an interactive audit. For each item, ask the user to confirm yes, no, or not applicable. If the user describes their stack, tailor the language (e.g., call out Prisma for SQL injection if they use it, httpOnly cookie setup for Next.js if relevant).
+### Step 1 — Collect the stack
 
-Flag all "no" answers. Blockers must be resolved before delivery. Warnings should be resolved within 30 days.
+Before running any checklist items, ask the user:
+
+- **Frontend framework**: Next.js, Nuxt, SvelteKit, plain React, other?
+- **Backend/API**: Same framework, Express, FastAPI, Django, Rails, other?
+- **Auth method**: NextAuth, Supabase Auth, Clerk, custom JWT, session-based, other?
+- **Database**: Postgres, MySQL, MongoDB, Supabase, other?
+- **Hosting**: Vercel, Railway, Render, AWS, Fly.io, other?
+
+Use these answers to tailor every fix. "Store tokens in httpOnly cookies" looks different in Next.js (set-cookie response header) versus Express (res.cookie with options) versus Supabase (handled by the client library).
+
+### Step 2 — Choose a mode
+
+Ask the user:
+- **Full audit** — all 36 items (recommended before first client delivery)
+- **Fast scan** — blockers only (15 items, for experienced devs doing a final check)
+
+Blockers: items 1, 2, 3, 6, 8, 10, 11, 12, 13, 17, 18, 19, 24, 25, 31, 34, 36
+
+### Step 3 — Run the checklist
+
+Present items one at a time. Show progress ("Item X of 36" or "Item X of 15" in fast mode). For each item the user confirms: **yes**, **no**, or **not applicable**.
+
+- "No" on a **[BLOCKER]** = must fix before delivery
+- "No" on a **[WARNING]** = fix within 30 days
+- "Not applicable" = skip with a brief reason noted
 
 ---
 
-## The 35 Items
+## The 36 Items
 
 ### Authentication
 
-1. **Passwords hashed with bcrypt or argon2 (minimum 12 rounds)**
+1. **[BLOCKER] Passwords hashed with bcrypt or argon2 (minimum 12 rounds)**
    - Risk: MD5, SHA1, or plain-text passwords are cracked in minutes after a database breach.
    - Fix: Use bcrypt with cost factor ≥12 or argon2id with recommended parameters.
 
-2. **Tokens stored in httpOnly cookies, not localStorage**
+2. **[BLOCKER] Tokens stored in httpOnly cookies, not localStorage**
    - Risk: Any XSS vulnerability can steal tokens from localStorage. httpOnly cookies are inaccessible to JavaScript.
    - Fix: Set `HttpOnly; Secure; SameSite=Strict` on all auth cookies.
 
-3. **JWT secret is random, at least 32 characters, not copied from a tutorial**
+3. **[BLOCKER] JWT secret is random, at least 32 characters, not copied from a tutorial**
    - Risk: Tutorial secrets like `secret` or `mysecret` are in public wordlists and brute-forced trivially.
-   - Fix: Generate with `openssl rand -hex 32`. Store in environment variables.
+   - Fix: Generate with `openssl rand -hex 32`. Store in environment variables, never in source code.
 
-4. **Access tokens expire within 15 to 60 minutes**
+4. **[WARNING] Access tokens expire within 15 to 60 minutes**
    - Risk: Non-expiring tokens are permanently valid after theft.
    - Fix: Set short expiry on access tokens. Use refresh tokens for session continuity.
 
-5. **Refresh token rotation implemented**
+5. **[WARNING] Refresh token rotation implemented**
    - Risk: Stolen refresh tokens grant indefinite access.
    - Fix: Issue a new refresh token on every use. Invalidate the old one immediately.
 
-6. **Rate limiting on /login and /register**
+6. **[BLOCKER] Rate limiting on /login and /register**
    - Risk: No rate limit means unlimited password guessing and account enumeration at machine speed.
    - Fix: Limit to 5–10 attempts per IP per minute. Use Upstash Redis or a middleware layer.
 
-7. **Account lockout after repeated login failures**
+7. **[WARNING] Account lockout after repeated login failures**
    - Risk: Attacker can brute-force indefinitely even with rate limiting if limits reset too fast.
    - Fix: Lock account after 10 consecutive failures. Require email unlock or timed reset.
 
-8. **Sessions invalidated server-side on logout**
+8. **[BLOCKER] Sessions invalidated server-side on logout**
    - Risk: Client-side logout only removes the cookie but the token remains valid if stolen before logout.
    - Fix: Maintain a token blocklist or use short-lived tokens with server-side session tracking.
 
-9. **Email verification required before access is granted**
+9. **[WARNING] Email verification required before access is granted**
    - Risk: Anyone can register with someone else's email and act as them.
    - Fix: Send verification email on register. Block access to protected routes until verified.
 
+10. **[BLOCKER] Password reset tokens expire and are single-use**
+    - Risk: Long-lived or reusable reset tokens are permanent account takeover links.
+    - Fix: Expire reset tokens after 15–60 minutes. Invalidate immediately on use. Hash them before storing.
+
 ### API Security
 
-10. **Every route verified for authentication — not just the obvious ones**
+11. **[BLOCKER] Every route verified for authentication — not just the obvious ones**
     - Risk: Developers add routes quickly and forget to add auth middleware. One unprotected route exposes everything.
     - Fix: Audit every route. Use a global auth middleware that denies by default, then explicitly allow public routes.
 
-11. **Authorization checked: each user can only access their own data**
+12. **[BLOCKER] Authorization checked: each user can only access their own data**
     - Risk: User A passes User B's ID in the request and gets their data. This is the most common API vulnerability.
     - Fix: Always filter database queries by the authenticated user's ID. Never trust IDs from the request body alone.
 
-12. **All request inputs validated with schema validation**
+13. **[BLOCKER] All request inputs validated with schema validation**
     - Risk: Unvalidated inputs are the root cause of injection attacks, type confusion, and unexpected behavior at scale.
     - Fix: Use Zod, Joi, Yup, or your framework's built-in validation on every request body, query param, and header.
 
-13. **API responses never include passwords, hashes, or internal fields**
+14. **[WARNING] API responses never include passwords, hashes, or internal fields**
     - Risk: Serializing full database objects leaks fields the client was never meant to see.
     - Fix: Explicitly allowlist the fields returned in every API response. Never serialize raw DB models.
 
-14. **Error messages don't reveal system internals or file paths**
+15. **[WARNING] Error messages don't reveal system internals or file paths**
     - Risk: Stack traces and file paths expose your architecture to attackers.
     - Fix: Return generic error messages in production. Log full details server-side only.
 
-15. **Rate limiting on all public-facing endpoints**
+16. **[WARNING] Rate limiting on all public-facing endpoints**
     - Risk: No rate limit means your API can be scraped, abused, or DoS'd without friction.
     - Fix: Apply a global rate limit at the edge (Cloudflare) or API layer (Upstash Redis).
 
-16. **CORS restricted to your domain — not wildcard `*`**
+17. **[BLOCKER] CORS restricted to your domain — not wildcard `*`**
     - Risk: Wildcard CORS allows any site to make credentialed requests to your API.
     - Fix: Set `Access-Control-Allow-Origin` to your specific domain only.
 
-17. **HTTPS enforced, HTTP redirected**
+18. **[BLOCKER] HTTPS enforced, HTTP redirected**
     - Risk: HTTP exposes tokens, session cookies, and data to anyone on the network path.
     - Fix: Redirect all HTTP to HTTPS at the server or CDN level. Set HSTS headers.
 
+19. **[BLOCKER] CSRF protection implemented for state-changing requests**
+    - Risk: A malicious site can trigger authenticated requests on behalf of a logged-in user.
+    - Fix: Use SameSite=Strict on cookies, or add CSRF tokens to all state-changing forms and API calls. Verify the Origin header server-side.
+
+20. **[WARNING] Security headers configured**
+    - Risk: Missing headers enable clickjacking, MIME sniffing, and XSS attacks that a single response header would prevent.
+    - Fix: Set `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and `Strict-Transport-Security`. Use helmet.js (Node) or equivalent middleware.
+
 ### Database
 
-18. **No SQL string concatenation — use parameterized queries or ORM**
+21. **[BLOCKER] No SQL string concatenation — use parameterized queries or ORM**
     - Risk: String-concatenated SQL is injectable. One malformed input can dump or destroy your database.
     - Fix: Use parameterized queries, prepared statements, or a safe ORM like Prisma. Never build SQL with user input.
 
-19. **Application uses a limited-permission DB user, not root**
+22. **[WARNING] Application uses a limited-permission DB user, not root**
     - Risk: Root database access means a compromised app can drop tables, create users, or exfiltrate everything.
     - Fix: Create a DB user with only SELECT, INSERT, UPDATE, DELETE on the application schema. No DDL permissions.
 
-20. **Database not publicly accessible**
+23. **[WARNING] Database not publicly accessible**
     - Risk: A publicly exposed database can be reached by any scanner on the internet.
     - Fix: Place the database behind a VPC or firewall rule that only allows connections from your app servers.
 
-21. **Backups configured and a restore has been tested**
+24. **[WARNING] Backups configured and a restore has been tested**
     - Risk: Having backups you've never restored is not a backup strategy. You'll find out it's broken during an incident.
     - Fix: Run a full restore to a staging environment. Verify the data. Schedule this monthly.
 
-22. **Sensitive fields encrypted at rest**
+25. **[WARNING] Sensitive fields encrypted at rest**
     - Risk: PII, payment data, or health data stored in plaintext is fully exposed after any database breach.
     - Fix: Encrypt sensitive columns at the application layer before writing. Use a KMS-managed key.
 
 ### Infrastructure
 
-23. **All secrets in environment variables, not source code**
+26. **[BLOCKER] All secrets in environment variables, not source code**
     - Risk: Hardcoded secrets get committed, pushed, and indexed by GitHub. Rotation is then insufficient.
     - Fix: Move all secrets to environment variables or a secrets manager (Doppler, AWS Secrets Manager, Vault).
 
-24. **`.env` not in git history**
+27. **[BLOCKER] `.env` not in git history**
     - Risk: `.env` added and later removed is still in git history and accessible via `git log`.
     - Fix: Run `git log -- .env`. If it appears, purge it with `git filter-repo` and rotate every secret in it.
 
-25. **SSL certificate installed and valid**
+28. **[WARNING] SSL certificate installed and valid**
     - Risk: Expired certificates break your app and expose users to MITM attacks.
     - Fix: Use Let's Encrypt with auto-renewal, or verify your CDN/host handles cert renewal automatically.
 
-26. **Server not running as root**
+29. **[WARNING] Server not running as root**
     - Risk: A compromised process running as root has full system access.
     - Fix: Run your app process as a non-root user. Use Docker's `USER` directive or system user accounts.
 
-27. **Only ports 80 and 443 publicly accessible**
+30. **[WARNING] Only ports 80 and 443 publicly accessible**
     - Risk: Exposed database ports, admin panels, or debug endpoints are the most common initial attack vector.
     - Fix: Firewall everything except 80 and 443. Access internal tools via SSH tunnel or VPN only.
 
 ### Code
 
-28. **No `console.log` statements in production build**
+31. **[WARNING] No `console.log` statements in production build**
     - Risk: Logs can leak internal data, tokens, or stack traces to anyone with browser DevTools open.
     - Fix: Strip logs at build time (ESLint `no-console` rule, or a build plugin). Verify in the production bundle.
 
-29. **`npm audit` run — all critical and high vulnerabilities resolved**
+32. **[WARNING] `npm audit` run — all critical and high vulnerabilities resolved**
     - Risk: Known CVEs in your dependencies are public and actively exploited.
     - Fix: Run `npm audit --audit-level=high`. Update or patch vulnerable packages. Review breaking changes.
 
-30. **No hardcoded credentials anywhere in the codebase**
+33. **[WARNING] Dependency lockfile committed to the repository**
+    - Risk: Without a lockfile, CI installs different package versions than local dev. Supply chain attacks can slip through version ranges.
+    - Fix: Commit `package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml`. Never add lockfiles to `.gitignore`.
+
+34. **[BLOCKER] No hardcoded credentials anywhere in the codebase**
     - Risk: API keys, database URLs, or passwords in source code get pushed, shared, and indexed.
     - Fix: Run `git grep -i "password\|secret\|api_key\|token"` and audit every match.
+
+35. **[WARNING] File uploads validated for type, size, and path**
+    - Risk: Unrestricted uploads allow attackers to upload executables, exhaust disk, or escape to arbitrary paths.
+    - Fix: Validate MIME type server-side (not just the extension), enforce a size limit, and never use user-supplied filenames as storage paths.
+
+36. **[WARNING] MFA available for apps handling sensitive or financial data**
+    - Risk: Password-only auth is the single biggest account takeover vector for high-value targets.
+    - Fix: Offer TOTP (Google Authenticator) or passkey-based MFA. For financial or health apps, make it mandatory.
 
 ---
 
@@ -157,17 +205,20 @@ After auditing, produce a report in this structure:
 
 ```
 BLOCKERS (fix before delivery):
-- [item number] [item name]: [specific fix for their stack]
+- [#] [item name]: [specific fix for their stack]
 
 WARNINGS (fix within 30 days):
-- [item number] [item name]: [specific fix for their stack]
+- [#] [item name]: [specific fix for their stack]
+
+NOT APPLICABLE:
+- [#] [item name]: [reason]
 
 PASSED:
-- [count] of 30 items confirmed secure
+- [count] of [applicable count] items confirmed secure
 ```
 
-Severity classification:
-- Blocker: items 1, 2, 3, 6, 8, 10, 11, 12, 16, 17, 18, 23, 24, 30
-- Warning: all others
+Never tell the user their app is secure if any BLOCKER items are unresolved.
 
-Never tell the user their app is secure if any blocker items are unresolved.
+---
+
+> Also run the **pre-launch-checklist** to audit infrastructure, load handling, observability, and operations before launch.

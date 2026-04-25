@@ -1,6 +1,6 @@
 # pre-ship-checklist
 
-Two production readiness skills for Claude. Run them before you ship anything.
+Two production readiness skills for Claude Code. Run them before you ship anything.
 
 ---
 
@@ -12,13 +12,18 @@ A 25-point ops and infrastructure audit. Covers the failure modes that kill apps
 
 ### vibe-coder-security-checklist
 
-A 30-point security audit for web applications. Covers authentication, API security, database hardening, infrastructure configuration, and code hygiene. Tailored for vibe coders and freelancers shipping to clients. Flags blockers (ship-stopping vulnerabilities) versus warnings (fix within 30 days).
+A 36-point security audit for web applications. Covers authentication, API security, database hardening, infrastructure configuration, and code hygiene. Designed for developers shipping to clients or going live. Flags blockers (fix before delivery) versus warnings (fix within 30 days).
 
 ---
 
 ## What They Do
 
-When triggered, each skill runs through its checklist interactively. For each item, Claude checks your stack, identifies the specific risk, and gives a concrete fix. At the end it produces a structured report with two buckets: blockers (must fix before launch/delivery) and warnings (fix within 30 days).
+When triggered, each skill:
+
+1. Collects your stack (framework, hosting, auth, database) to tailor every fix
+2. Offers a **full audit** or **fast scan** (blockers only) mode
+3. Walks through items one at a time with progress tracking
+4. Produces a structured report: BLOCKERS / WARNINGS / NOT APPLICABLE / PASSED
 
 ---
 
@@ -26,27 +31,17 @@ When triggered, each skill runs through its checklist interactively. For each it
 
 ### pre-launch-checklist
 
-- "going live"
-- "about to launch"
-- "pre-launch"
-- "before I ship"
-- "production checklist"
-- "ready to deploy"
-- "is my app ready"
-- "launch checklist"
+- "going live" / "about to launch" / "pre-launch"
+- "before I ship" / "ready to deploy" / "is my app ready"
+- "production checklist" / "launch checklist"
 
 Also fires proactively when you describe finishing a build and start talking about deployment.
 
 ### vibe-coder-security-checklist
 
-- "security checklist"
-- "security review"
-- "client delivery"
-- "pre-ship security"
-- "before I deliver"
-- "check for vulnerabilities"
-- "is my app secure"
-- "security audit"
+- "security checklist" / "security review" / "security audit"
+- "client delivery" / "before I deliver"
+- "check for vulnerabilities" / "is my app secure" / "harden my app"
 
 Also fires proactively when you've finished an app with authentication or user data and start talking about delivery.
 
@@ -60,7 +55,7 @@ Also fires proactively when you've finished an app with authentication or user d
 
 ---
 
-## The Checklists (Summary)
+## Checklists
 
 ### pre-launch-checklist — 25 Items
 
@@ -92,7 +87,7 @@ Also fires proactively when you've finished an app with authentication or user d
 | 24 | Memory leak detection in place | Operations | Warning |
 | 25 | Runbook exists for common incidents | Operations | Blocker |
 
-### vibe-coder-security-checklist — 30 Items
+### vibe-coder-security-checklist — 36 Items
 
 | # | Item | Category | Severity |
 |---|------|----------|----------|
@@ -105,27 +100,39 @@ Also fires proactively when you've finished an app with authentication or user d
 | 7 | Account lockout after repeated failures | Authentication | Warning |
 | 8 | Sessions invalidated server-side on logout | Authentication | Blocker |
 | 9 | Email verification required before access | Authentication | Warning |
-| 10 | Every route verified for authentication | API Security | Blocker |
-| 11 | Authorization checked per user (own data only) | API Security | Blocker |
-| 12 | All inputs validated with schema validation | API Security | Blocker |
-| 13 | Responses never include passwords or hashes | API Security | Warning |
-| 14 | Error messages don't reveal internals | API Security | Warning |
-| 15 | Rate limiting on all public endpoints | API Security | Warning |
-| 16 | CORS restricted to your domain | API Security | Blocker |
-| 17 | HTTPS enforced, HTTP redirected | API Security | Blocker |
-| 18 | No SQL string concatenation | Database | Blocker |
-| 19 | App uses limited-permission DB user | Database | Warning |
-| 20 | Database not publicly accessible | Database | Warning |
-| 21 | Backups configured and restore tested | Database | Warning |
-| 22 | Sensitive fields encrypted at rest | Database | Warning |
-| 23 | All secrets in environment variables | Infrastructure | Blocker |
-| 24 | `.env` not in git history | Infrastructure | Blocker |
-| 25 | SSL certificate installed and valid | Infrastructure | Warning |
-| 26 | Server not running as root | Infrastructure | Warning |
-| 27 | Only ports 80 and 443 publicly accessible | Infrastructure | Warning |
-| 28 | No `console.log` in production build | Code | Warning |
-| 29 | `npm audit` run, criticals resolved | Code | Warning |
-| 30 | No hardcoded credentials in codebase | Code | Blocker |
+| 10 | Password reset tokens expire and are single-use | Authentication | Blocker |
+| 11 | Every route verified for authentication | API Security | Blocker |
+| 12 | Authorization checked per user (own data only) | API Security | Blocker |
+| 13 | All inputs validated with schema validation | API Security | Blocker |
+| 14 | Responses never include passwords or hashes | API Security | Warning |
+| 15 | Error messages don't reveal internals | API Security | Warning |
+| 16 | Rate limiting on all public endpoints | API Security | Warning |
+| 17 | CORS restricted to your domain | API Security | Blocker |
+| 18 | HTTPS enforced, HTTP redirected | API Security | Blocker |
+| 19 | CSRF protection implemented | API Security | Blocker |
+| 20 | Security headers configured | API Security | Warning |
+| 21 | No SQL string concatenation | Database | Blocker |
+| 22 | App uses limited-permission DB user | Database | Warning |
+| 23 | Database not publicly accessible | Database | Warning |
+| 24 | Backups configured and restore tested | Database | Warning |
+| 25 | Sensitive fields encrypted at rest | Database | Warning |
+| 26 | All secrets in environment variables | Infrastructure | Blocker |
+| 27 | `.env` not in git history | Infrastructure | Blocker |
+| 28 | SSL certificate installed and valid | Infrastructure | Warning |
+| 29 | Server not running as root | Infrastructure | Warning |
+| 30 | Only ports 80 and 443 publicly accessible | Infrastructure | Warning |
+| 31 | No `console.log` in production build | Code | Warning |
+| 32 | `npm audit` run, criticals resolved | Code | Warning |
+| 33 | Dependency lockfile committed to repo | Code | Warning |
+| 34 | No hardcoded credentials in codebase | Code | Blocker |
+| 35 | File uploads validated for type, size, path | Code | Warning |
+| 36 | MFA available for sensitive/financial apps | Code | Warning |
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 

@@ -6,9 +6,11 @@ Two production readiness skills for Claude Code. Run them before you ship anythi
 
 ## Installation
 
-You can install the skills from npm with `npx`, globally, inside a single project, or manually.
+You can install the checklists from npm with `npx`, globally, inside a single project, or manually.
 
-### Run once with npx
+By default, the installer targets Claude Code. Use `--agent` to install for OpenClaw, Hermes, Goose, Pi, or a generic AgentSkills directory.
+
+### Run once with npx for Claude Code
 
 ```sh
 npx pre-ship-checklist-skill install
@@ -16,11 +18,40 @@ npx pre-ship-checklist-skill install
 
 This installs both `.skill` files into your Claude skills directory.
 
+### Install for other agents
+
+```sh
+npx pre-ship-checklist-skill install --agent openclaw
+npx pre-ship-checklist-skill install --agent hermes
+npx pre-ship-checklist-skill install --agent pi
+npx pre-ship-checklist-skill install --agent goose
+npx pre-ship-checklist-skill install --agent agents
+```
+
+OpenClaw, Hermes, Pi, and `agents` installs use AgentSkills-style folders:
+
+```text
+<target>/
+  pre-launch-checklist/
+    SKILL.md
+  vibe-coder-security-checklist/
+    SKILL.md
+```
+
+Goose does not use the same skill-folder convention, so `--agent goose` installs a managed pre-ship checklist block into `.goosehints`.
+
+Show all supported targets:
+
+```sh
+npx pre-ship-checklist-skill targets
+```
+
 ### Install globally
 
 ```sh
 npm install --global pre-ship-checklist-skill
 pre-ship-checklist-skill install
+pre-ship-checklist-skill install --agent openclaw
 ```
 
 Use this if you want the installer command available from any folder.
@@ -30,6 +61,7 @@ Use this if you want the installer command available from any folder.
 ```sh
 npm install --save-dev pre-ship-checklist-skill
 npx pre-ship-checklist-skill install
+npx pre-ship-checklist-skill install --agent pi --scope project
 ```
 
 Use this if you want the installer version pinned in a specific project's `package.json`.
@@ -54,17 +86,24 @@ npm run install:pre-ship-skills
 
 ```sh
 npx pre-ship-checklist-skill install --target /path/to/claude/skills
+npx pre-ship-checklist-skill install --agent hermes --target /path/to/hermes/skills
+npx pre-ship-checklist-skill install --agent goose --target /path/to/.goosehints
 ```
 
-You can also set `CLAUDE_SKILLS_DIR`:
+You can also set agent-specific environment variables:
 
 ```sh
 CLAUDE_SKILLS_DIR=/path/to/claude/skills npx pre-ship-checklist-skill install
+OPENCLAW_SKILLS_DIR=/path/to/openclaw/skills npx pre-ship-checklist-skill install --agent openclaw
+HERMES_SKILLS_DIR=/path/to/hermes/skills npx pre-ship-checklist-skill install --agent hermes
+PI_SKILLS_DIR=/path/to/pi/skills npx pre-ship-checklist-skill install --agent pi
+AGENTS_SKILLS_DIR=/path/to/.agents/skills npx pre-ship-checklist-skill install --agent agents
+GOOSE_HINTS_FILE=/path/to/.goosehints npx pre-ship-checklist-skill install --agent goose
 ```
 
 ### Install directly from GitHub
 
-If you want the latest repository version before it is published to npm, install directly from GitHub:
+If you want the latest repository version before a new npm release is published, install directly from GitHub:
 
 ```sh
 npx --yes github:xPAlien/pre_ship_checklist_skill install
@@ -76,9 +115,11 @@ npm install --save-dev github:xPAlien/pre_ship_checklist_skill
 
 ```sh
 pre-ship-checklist-skill install
+pre-ship-checklist-skill install --agent openclaw --scope project
 pre-ship-checklist-skill install --dry-run
 pre-ship-checklist-skill install --force
 pre-ship-checklist-skill list
+pre-ship-checklist-skill targets
 pre-ship-checklist-skill doctor
 pre-ship-checklist-skill --help
 ```

@@ -1,7 +1,7 @@
 {
   "name": "pre-ship-checklist-skill",
-  "version": "0.1.0",
-  "description": "Installable Claude Code pre-ship production and security checklist skills.",
+  "version": "0.2.0",
+  "description": "Installable pre-ship production and security checklist skills for AI coding agents.",
   "bin": {
     "pre-ship-checklist-skill": "./bin/pre-ship-checklist-skill.js"
   },
@@ -20,14 +20,27 @@
   "keywords": [
     "claude",
     "claude-code",
+    "openclaw",
+    "hermes",
+    "goose",
+    "pi",
+    "agent-skills",
     "skill",
     "pre-ship",
     "checklist",
     "security",
     "production-readiness"
   ],
-  "author": "",
+  "author": "xPAlien",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xPAlien/pre_ship_checklist_skill.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xPAlien/pre_ship_checklist_skill/issues"
+  },
+  "homepage": "https://github.com/xPAlien/pre_ship_checklist_skill#readme",
   "type": "commonjs",
   "engines": {
     "node": ">=18"

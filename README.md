@@ -4,49 +4,6 @@ Two production readiness skills for Claude Code. Run them before you ship anythi
 
 ---
 
-## Skills
-
-### pre-launch-checklist
-
-A 25-point ops and infrastructure audit. Covers the failure modes that kill apps in production: load, database, async work, resilience, observability, and operations. Works as an interactive audit. Flags blockers versus warnings. Never tells you you're ready if blockers are unresolved.
-
-### vibe-coder-security-checklist
-
-A 36-point security audit for web applications. Covers authentication, API security, database hardening, infrastructure configuration, and code hygiene. Designed for developers shipping to clients or going live. Flags blockers (fix before delivery) versus warnings (fix within 30 days).
-
----
-
-## What They Do
-
-When triggered, each skill:
-
-1. Collects your stack (framework, hosting, auth, database) to tailor every fix
-2. Offers a **full audit** or **fast scan** (blockers only) mode
-3. Walks through items one at a time with progress tracking
-4. Produces a structured report: BLOCKERS / WARNINGS / NOT APPLICABLE / PASSED
-
----
-
-## Trigger Phrases
-
-### pre-launch-checklist
-
-- "going live" / "about to launch" / "pre-launch"
-- "before I ship" / "ready to deploy" / "is my app ready"
-- "production checklist" / "launch checklist"
-
-Also fires proactively when you describe finishing a build and start talking about deployment.
-
-### vibe-coder-security-checklist
-
-- "security checklist" / "security review" / "security audit"
-- "client delivery" / "before I deliver"
-- "check for vulnerabilities" / "is my app secure" / "harden my app"
-
-Also fires proactively when you've finished an app with authentication or user data and start talking about delivery.
-
----
-
 ## Installation
 
 You can install the skills from npm with `npx`, globally, inside a single project, or manually.
@@ -131,6 +88,49 @@ pre-ship-checklist-skill --help
 1. Download the `.skill` file(s) you want
 2. Drop them into your Claude skills directory
 3. Reload Claude
+
+---
+
+## Skills
+
+### pre-launch-checklist
+
+A 25-point ops and infrastructure audit. Covers the failure modes that kill apps in production: load, database, async work, resilience, observability, and operations. Works as an interactive audit. Flags blockers versus warnings. Never tells you you're ready if blockers are unresolved.
+
+### vibe-coder-security-checklist
+
+A 36-point security audit for web applications. Covers authentication, API security, database hardening, infrastructure configuration, and code hygiene. Designed for developers shipping to clients or going live. Flags blockers (fix before delivery) versus warnings (fix within 30 days).
+
+---
+
+## What They Do
+
+When triggered, each skill:
+
+1. Collects your stack (framework, hosting, auth, database) to tailor every fix
+2. Offers a **full audit** or **fast scan** (blockers only) mode
+3. Walks through items one at a time with progress tracking
+4. Produces a structured report: BLOCKERS / WARNINGS / NOT APPLICABLE / PASSED
+
+---
+
+## Trigger Phrases
+
+### pre-launch-checklist
+
+- "going live" / "about to launch" / "pre-launch"
+- "before I ship" / "ready to deploy" / "is my app ready"
+- "production checklist" / "launch checklist"
+
+Also fires proactively when you describe finishing a build and start talking about deployment.
+
+### vibe-coder-security-checklist
+
+- "security checklist" / "security review" / "security audit"
+- "client delivery" / "before I deliver"
+- "check for vulnerabilities" / "is my app secure" / "harden my app"
+
+Also fires proactively when you've finished an app with authentication or user data and start talking about delivery.
 
 ---
 

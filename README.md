@@ -49,6 +49,75 @@ Also fires proactively when you've finished an app with authentication or user d
 
 ## Installation
 
+You can install the skills with `npx`, globally, inside a single project, or manually.
+
+### Run once with npx
+
+```sh
+npx pre-ship-checklist-skill install
+```
+
+This installs both `.skill` files into your Claude skills directory.
+
+### Install globally
+
+```sh
+npm install --global pre-ship-checklist-skill
+pre-ship-checklist-skill install
+```
+
+Use this if you want the installer command available from any folder.
+
+### Install in a project
+
+```sh
+npm install --save-dev pre-ship-checklist-skill
+npx pre-ship-checklist-skill install
+```
+
+Use this if you want the installer version pinned in a specific project's `package.json`.
+
+You can also add a project script:
+
+```json
+{
+  "scripts": {
+    "install:pre-ship-skills": "pre-ship-checklist-skill install"
+  }
+}
+```
+
+Then run:
+
+```sh
+npm run install:pre-ship-skills
+```
+
+### Install to a custom directory
+
+```sh
+npx pre-ship-checklist-skill install --target /path/to/claude/skills
+```
+
+You can also set `CLAUDE_SKILLS_DIR`:
+
+```sh
+CLAUDE_SKILLS_DIR=/path/to/claude/skills npx pre-ship-checklist-skill install
+```
+
+### Installer commands
+
+```sh
+pre-ship-checklist-skill install
+pre-ship-checklist-skill install --dry-run
+pre-ship-checklist-skill install --force
+pre-ship-checklist-skill list
+pre-ship-checklist-skill doctor
+pre-ship-checklist-skill --help
+```
+
+### Manual install
+
 1. Download the `.skill` file(s) you want
 2. Drop them into your Claude skills directory
 3. Reload Claude

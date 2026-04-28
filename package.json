@@ -1,0 +1,35 @@
+{
+  "name": "pre-ship-checklist-skill",
+  "version": "0.1.0",
+  "description": "Installable Claude Code pre-ship production and security checklist skills.",
+  "bin": {
+    "pre-ship-checklist-skill": "./bin/pre-ship-checklist-skill.js"
+  },
+  "files": [
+    "*.skill",
+    "bin",
+    "README.md",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "skill",
+    "pre-ship",
+    "checklist",
+    "security",
+    "production-readiness"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  }
+}

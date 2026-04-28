@@ -49,29 +49,29 @@ Also fires proactively when you've finished an app with authentication or user d
 
 ## Installation
 
-You can install the skills with `npx`, globally, inside a single project, or manually.
+You can install the skills directly from GitHub today. The shorter npm registry commands work after this package is published to npm.
 
-### Run once with npx
+### Run once from GitHub with npx
 
 ```sh
-npx pre-ship-checklist-skill install
+npx --yes github:xPAlien/pre_ship_checklist_skill install
 ```
 
 This installs both `.skill` files into your Claude skills directory.
 
-### Install globally
+### Install globally from GitHub
 
 ```sh
-npm install --global pre-ship-checklist-skill
+npm install --global github:xPAlien/pre_ship_checklist_skill
 pre-ship-checklist-skill install
 ```
 
 Use this if you want the installer command available from any folder.
 
-### Install in a project
+### Install in a project from GitHub
 
 ```sh
-npm install --save-dev pre-ship-checklist-skill
+npm install --save-dev github:xPAlien/pre_ship_checklist_skill
 npx pre-ship-checklist-skill install
 ```
 
@@ -96,13 +96,23 @@ npm run install:pre-ship-skills
 ### Install to a custom directory
 
 ```sh
-npx pre-ship-checklist-skill install --target /path/to/claude/skills
+npx --yes github:xPAlien/pre_ship_checklist_skill install --target /path/to/claude/skills
 ```
 
 You can also set `CLAUDE_SKILLS_DIR`:
 
 ```sh
-CLAUDE_SKILLS_DIR=/path/to/claude/skills npx pre-ship-checklist-skill install
+CLAUDE_SKILLS_DIR=/path/to/claude/skills npx --yes github:xPAlien/pre_ship_checklist_skill install
+```
+
+### After publishing to npm
+
+Once `pre-ship-checklist-skill` is published to the npm registry, you can use the shorter commands:
+
+```sh
+npx pre-ship-checklist-skill install
+npm install --global pre-ship-checklist-skill
+npm install --save-dev pre-ship-checklist-skill
 ```
 
 ### Installer commands

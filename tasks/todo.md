@@ -22,3 +22,4 @@
 - PASS: `npm run pack:dry-run` included both `.skill` files, docs, package metadata, and installer CLI.
 - PASS: `npx --yes --package . pre-ship-checklist-skill list` listed both packaged skill files.
 - PASS: Commit `7427458` pushed to `origin/master`.
+- PASS: `pre-ship-checklist-skill@0.1.0` was published to npm and verified with `npm view pre-ship-checklist-skill version`.

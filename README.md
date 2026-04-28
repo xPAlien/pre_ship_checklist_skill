@@ -49,29 +49,29 @@ Also fires proactively when you've finished an app with authentication or user d
 
 ## Installation
 
-You can install the skills directly from GitHub today. The shorter npm registry commands work after this package is published to npm.
+You can install the skills from npm with `npx`, globally, inside a single project, or manually.
 
-### Run once from GitHub with npx
+### Run once with npx
 
 ```sh
-npx --yes github:xPAlien/pre_ship_checklist_skill install
+npx pre-ship-checklist-skill install
 ```
 
 This installs both `.skill` files into your Claude skills directory.
 
-### Install globally from GitHub
+### Install globally
 
 ```sh
-npm install --global github:xPAlien/pre_ship_checklist_skill
+npm install --global pre-ship-checklist-skill
 pre-ship-checklist-skill install
 ```
 
 Use this if you want the installer command available from any folder.
 
-### Install in a project from GitHub
+### Install in a project
 
 ```sh
-npm install --save-dev github:xPAlien/pre_ship_checklist_skill
+npm install --save-dev pre-ship-checklist-skill
 npx pre-ship-checklist-skill install
 ```
 
@@ -96,23 +96,23 @@ npm run install:pre-ship-skills
 ### Install to a custom directory
 
 ```sh
-npx --yes github:xPAlien/pre_ship_checklist_skill install --target /path/to/claude/skills
+npx pre-ship-checklist-skill install --target /path/to/claude/skills
 ```
 
 You can also set `CLAUDE_SKILLS_DIR`:
 
 ```sh
-CLAUDE_SKILLS_DIR=/path/to/claude/skills npx --yes github:xPAlien/pre_ship_checklist_skill install
+CLAUDE_SKILLS_DIR=/path/to/claude/skills npx pre-ship-checklist-skill install
 ```
 
-### After publishing to npm
+### Install directly from GitHub
 
-Once `pre-ship-checklist-skill` is published to the npm registry, you can use the shorter commands:
+If you want the latest repository version before it is published to npm, install directly from GitHub:
 
 ```sh
-npx pre-ship-checklist-skill install
-npm install --global pre-ship-checklist-skill
-npm install --save-dev pre-ship-checklist-skill
+npx --yes github:xPAlien/pre_ship_checklist_skill install
+npm install --global github:xPAlien/pre_ship_checklist_skill
+npm install --save-dev github:xPAlien/pre_ship_checklist_skill
 ```
 
 ### Installer commands

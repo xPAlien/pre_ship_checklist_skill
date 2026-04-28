@@ -8,7 +8,7 @@
 - [x] Update the README with npx, global, project, and manual install instructions.
 - [x] Add focused tests for CLI behavior.
 - [x] Verify tests, package contents, and local npx execution.
-- [ ] Commit and push to `xPAlien/pre_ship_checklist_skill`.
+- [x] Commit and push to `xPAlien/pre_ship_checklist_skill`.
 
 ## Notes
 
@@ -21,3 +21,4 @@
 - PASS: `npm test` ran 6 Node tests successfully.
 - PASS: `npm run pack:dry-run` included both `.skill` files, docs, package metadata, and installer CLI.
 - PASS: `npx --yes --package . pre-ship-checklist-skill list` listed both packaged skill files.
+- PASS: Commit `7427458` pushed to `origin/master`.

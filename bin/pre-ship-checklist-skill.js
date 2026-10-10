@@ -1,115 +1,92 @@
 #!/usr/bin/env node
+"use strict";
 
 const {
   copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
+  statSync,
   writeFileSync
 } = require("node:fs");
-const { basename, dirname, join, resolve } = require("node:path");
+const { basename, dirname, join, relative, resolve } = require("node:path");
 const { homedir, platform } = require("node:os");
 
-const ROOT_DIR = join(__dirname, "..");
-const SKILL_FILES = [
-  "pre-launch-checklist.skill",
-  "vibe-coder-security-checklist.skill"
-];
-
-const GOOSE_BLOCK_START = "# pre-ship-checklist-skill:start";
-const GOOSE_BLOCK_END = "# pre-ship-checklist-skill:end";
+const ROOT = join(__dirname, "..");
+const SPECIALISTS = ["pre-launch-checklist", "vibe-coder-security-checklist"];
+const SKILLS = ["ship", ...SPECIALISTS];
+const GOOSE_START = "# pre-ship-checklist-skill:start";
+const GOOSE_END = "# pre-ship-checklist-skill:end";
 
 const AGENTS = {
   claude: {
     label: "Claude Code",
-    format: "flat",
     env: "CLAUDE_SKILLS_DIR",
     global: () => join(homedir(), ".claude", "skills"),
     project: () => join(process.cwd(), ".claude", "skills")
   },
-  "claude-code": {
-    aliasFor: "claude"
+  "claude-code": { aliasFor: "claude" },
+  codex: {
+    label: "Codex",
+    env: "CODEX_SKILLS_DIR",
+    global: () => join(homedir(), ".agents", "skills"),
+    project: () => join(process.cwd(), ".agents", "skills")
   },
   openclaw: {
     label: "OpenClaw",
-    format: "agentskills",
     env: "OPENCLAW_SKILLS_DIR",
     global: () => join(homedir(), ".openclaw", "skills"),
     project: () => join(process.cwd(), "skills")
   },
   hermes: {
     label: "Hermes Agent",
-    format: "agentskills",
     env: "HERMES_SKILLS_DIR",
     global: () => join(homedir(), ".hermes", "skills"),
     project: () => join(process.cwd(), "skills")
   },
   pi: {
     label: "Pi coding agent",
-    format: "agentskills",
     env: "PI_SKILLS_DIR",
     global: () => join(homedir(), ".pi", "agent", "skills"),
     project: () => join(process.cwd(), ".pi", "skills")
   },
   agents: {
     label: "Generic AgentSkills",
-    format: "agentskills",
     env: "AGENTS_SKILLS_DIR",
     global: () => join(homedir(), ".agents", "skills"),
     project: () => join(process.cwd(), ".agents", "skills")
   },
   goose: {
     label: "Goose",
-    format: "goosehints",
     env: "GOOSE_HINTS_FILE",
-    global: () => {
-      if (platform() === "win32" && process.env.APPDATA) {
-        return join(process.env.APPDATA, "Block", "goose", "config", ".goosehints");
-      }
-
-      return join(homedir(), ".config", "goose", ".goosehints");
-    },
+    format: "goosehints",
+    global: () => platform() === "win32" && process.env.APPDATA
+      ? join(process.env.APPDATA, "Block", "goose", "config", ".goosehints")
+      : join(homedir(), ".config", "goose", ".goosehints"),
     project: () => join(process.cwd(), ".goosehints")
   }
 };
 
-function resolveAgent(agentName) {
-  const agent = AGENTS[agentName];
-
-  if (!agent) {
-    throw new Error(`Unknown agent: ${agentName}`);
-  }
-
-  if (agent.aliasFor) {
-    return resolveAgent(agent.aliasFor);
-  }
-
-  return agent;
+function agentFor(name) {
+  const agent = AGENTS[name];
+  if (!agent) throw new Error(`Unknown agent: ${name}`);
+  return agent.aliasFor ? agentFor(agent.aliasFor) : agent;
 }
 
-function defaultTarget(agentName, scope) {
-  const agent = resolveAgent(agentName);
-
-  if (agent.env && process.env[agent.env]) {
-    return resolve(process.env[agent.env]);
-  }
-
-  if (scope === "project") {
-    return agent.project();
-  }
-
-  return agent.global();
+function targetFor(name, scope) {
+  const agent = agentFor(name);
+  return resolve(process.env[agent.env] || agent[scope]());
 }
 
-function readPackageVersion() {
-  const packageJson = JSON.parse(readFileSync(join(ROOT_DIR, "package.json"), "utf8"));
-  return packageJson.version;
+function version() {
+  return JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
 }
 
 function printHelp() {
-  console.log(`pre-ship-checklist-skill
+  console.log(`pre-ship-checklist-skill v${version()}
 
-Install pre-ship checklist skills for Claude Code and compatible AI agents.
+Install and inspect three production-readiness skills.
 
 Usage:
   pre-ship-checklist-skill install [options]
@@ -118,16 +95,18 @@ Usage:
   pre-ship-checklist-skill doctor [options]
 
 Options:
-  --agent <name>   claude, openclaw, hermes, pi, agents, or goose
-  --scope <scope>  global or project
-  --target <path>  Install into a specific directory or file
-  --force          Overwrite existing changed skill files
-  --dry-run        Show what would be installed without writing files
-  --help, -h       Show this help message
-  --version, -v    Print the package version
+  --agent <name>   claude, codex, openclaw, hermes, pi, agents, goose
+  --scope <scope>  global or project (default: global)
+  --target <path>  Custom skills directory, or Goose hints file
+  --only <name>    ship, pre-launch-checklist, vibe-coder-security-checklist, all
+  --force          Overwrite only managed files that differ
+  --dry-run        Preview all planned files without writing
+  --help, -h       Show this help
+  --version, -v    Print package version
 
-Defaults:
-  --agent claude --scope global`);
+Defaults: --agent claude --scope global --only all
+All folder-based agents receive <skills>/<name>/SKILL.md.
+Existing flat Claude .skill files are not removed automatically.`);
 }
 
 function parseOptions(args) {
@@ -136,34 +115,19 @@ function parseOptions(args) {
     agentName: "claude",
     scope: "global",
     target: null,
+    only: "all",
     force: false,
     dryRun: false
   };
-
-  for (let index = 1; index < args.length; index += 1) {
-    const arg = args[index];
-
-    if (arg === "--agent") {
-      const value = args[index + 1];
-      if (!value) {
-        throw new Error("--agent requires a value");
-      }
-      options.agentName = value;
-      index += 1;
-    } else if (arg === "--scope") {
-      const value = args[index + 1];
-      if (value !== "global" && value !== "project") {
-        throw new Error("--scope must be global or project");
-      }
-      options.scope = value;
-      index += 1;
-    } else if (arg === "--target") {
-      const value = args[index + 1];
-      if (!value) {
-        throw new Error("--target requires a path");
-      }
-      options.target = resolve(value);
-      index += 1;
+  for (let i = 1; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === "--agent" || arg === "--scope" || arg === "--target" || arg === "--only") {
+      const value = args[++i];
+      if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value`);
+      if (arg === "--agent") options.agentName = value;
+      if (arg === "--scope") options.scope = value;
+      if (arg === "--target") options.target = resolve(value);
+      if (arg === "--only") options.only = value;
     } else if (arg === "--force") {
       options.force = true;
     } else if (arg === "--dry-run") {
@@ -172,211 +136,159 @@ function parseOptions(args) {
       throw new Error(`Unknown option: ${arg}`);
     }
   }
-
-  options.agent = resolveAgent(options.agentName);
-  options.target = options.target || defaultTarget(options.agentName, options.scope);
-
+  if (options.scope !== "global" && options.scope !== "project") {
+    throw new Error("--scope must be global or project");
+  }
+  if (options.only !== "all" && !SKILLS.includes(options.only)) {
+    throw new Error(`Unknown skill: ${options.only}`);
+  }
+  options.agent = agentFor(options.agentName);
+  options.target = options.target || targetFor(options.agentName, options.scope);
   return options;
 }
 
-function listSkills() {
-  for (const file of SKILL_FILES) {
-    console.log(file);
+function selectedSkills(options) {
+  return options.only === "all" ? SKILLS : [options.only];
+}
+
+function walkFiles(path) {
+  if (!existsSync(path)) throw new Error(`Missing packaged skill directory: ${path}`);
+  const files = [];
+  for (const entry of readdirSync(path, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    const absolute = join(path, entry.name);
+    if (entry.isDirectory()) files.push(...walkFiles(absolute));
+    else if (entry.isFile()) files.push(absolute);
+    else throw new Error(`Unexpected non-file in skill: ${absolute}`);
   }
+  return files;
 }
 
-function listTargets() {
-  for (const [name, agent] of Object.entries(AGENTS)) {
-    if (agent.aliasFor) {
-      continue;
-    }
-
-    console.log(`${name}: ${agent.label}`);
-    console.log(`  global:  ${defaultTarget(name, "global")}`);
-    console.log(`  project: ${defaultTarget(name, "project")}`);
-  }
-}
-
-function readSkill(file) {
-  const source = join(ROOT_DIR, file);
-  const content = readFileSync(source, "utf8");
-  const nameMatch = content.match(/^name:\s*["']?([^"'\r\n]+)["']?/m);
-
-  return {
-    file,
-    source,
-    content,
-    name: nameMatch ? nameMatch[1].trim() : basename(file, ".skill")
-  };
-}
-
-function getInstallPlan(options) {
-  if (options.agent.format === "goosehints") {
-    return [
-      {
-        kind: "goosehints",
-        destination: options.target
+function installPlan(options) {
+  if (options.agent.format === "goosehints") return [];
+  const plan = [];
+  for (const skill of selectedSkills(options)) {
+    const folder = join(options.target, skill);
+    if (skill === "ship") {
+      for (const source of walkFiles(join(ROOT, "ship"))) {
+        plan.push({
+          skill,
+          source,
+          destination: join(folder, relative(join(ROOT, "ship"), source))
+        });
       }
-    ];
+    } else {
+      const source = join(ROOT, `${skill}.skill`);
+      if (!existsSync(source)) throw new Error(`Missing packaged skill file: ${source}`);
+      plan.push({ skill, source, destination: join(folder, "SKILL.md") });
+    }
   }
-
-  return SKILL_FILES.map(file => {
-    const skill = readSkill(file);
-    const destination =
-      options.agent.format === "agentskills"
-        ? join(options.target, skill.name, "SKILL.md")
-        : join(options.target, basename(file));
-
-    return {
-      kind: "skill",
-      source: skill.source,
-      destination,
-      label: options.agent.format === "agentskills" ? `${skill.name}/SKILL.md` : basename(file)
-    };
-  });
+  return plan;
 }
 
-function installSkillFiles(options) {
-  const plan = getInstallPlan(options);
+function fileEqual(a, b) {
+  return readFileSync(a).equals(readFileSync(b));
+}
 
+function installFiles(options) {
+  const plan = installPlan(options);
+  const conflicts = plan.filter(x => existsSync(x.destination) && !fileEqual(x.source, x.destination));
+  if (conflicts.length > 0 && !options.force) {
+    throw new Error(`Changed installed file(s) already exist. No files were written. Use --force after review:\n${conflicts.map(x => `- ${x.destination}`).join("\n")}`);
+  }
   if (options.dryRun) {
-    console.log(`Would install ${plan.length} skill file(s) for ${options.agent.label} to ${options.target}`);
-    for (const item of plan) {
-      console.log(`- ${item.label} -> ${item.destination}`);
-    }
+    console.log(`Would install ${plan.length} managed file(s) for ${options.agent.label} to ${options.target}`);
+    for (const item of plan) console.log(`- ${item.skill}: ${item.destination}`);
     return 0;
   }
-
-  const copied = [];
-  const skipped = [];
-
+  let copied = 0;
+  let unchanged = 0;
   for (const item of plan) {
-    if (!existsSync(item.source)) {
-      throw new Error(`Missing packaged skill file: ${basename(item.source)}`);
-    }
-
-    mkdirSync(dirname(item.destination), { recursive: true });
-
-    if (existsSync(item.destination) && !options.force) {
-      const sourceContent = readFileSync(item.source, "utf8");
-      const destinationContent = readFileSync(item.destination, "utf8");
-
-      if (sourceContent !== destinationContent) {
-        throw new Error(`${item.destination} already exists. Re-run with --force to overwrite it.`);
-      }
-
-      skipped.push(item.destination);
+    if (existsSync(item.destination) && fileEqual(item.source, item.destination)) {
+      unchanged += 1;
       continue;
     }
-
+    mkdirSync(dirname(item.destination), { recursive: true });
     copyFileSync(item.source, item.destination);
-    copied.push(item.destination);
+    copied += 1;
   }
-
-  console.log(`Installed ${copied.length} skill file(s) for ${options.agent.label} to ${options.target}`);
-
-  if (skipped.length > 0) {
-    console.log(`Skipped ${skipped.length} unchanged existing file(s).`);
-  }
-
+  console.log(`Installed ${copied} managed file(s) for ${options.agent.label} to ${options.target}. ${unchanged} unchanged.`);
   return 0;
 }
 
-function gooseHintsContent() {
-  return `${GOOSE_BLOCK_START}
-Pre-ship checklist guidance:
-- Before launch or client delivery, run the pre-launch production checklist and the pre-ship security checklist.
-- Production readiness areas: load, database, async work, resilience, observability, and operations.
-- Security areas: authentication, API authorization, input validation, CORS/HTTPS/CSRF, database hardening, infrastructure secrets, dependency checks, and upload validation.
-- Treat blocker findings as must-fix before delivery. Treat warning findings as follow-up work within 30 days.
-- Produce reports with BLOCKERS, WARNINGS, NOT APPLICABLE, and PASSED sections.
-${GOOSE_BLOCK_END}`;
+function gooseContent(options) {
+  const selected = selectedSkills(options);
+  return `${GOOSE_START}
+Pre-ship readiness guidance, managed by pre-ship-checklist-skill v${version()}.
+Selected audits: ${selected.join(", ")}.
+- Ship: use the eight evidence-based release gates. Default to a read-only audit. Unverified critical controls block release.
+- Pre-launch: audit state, scale, database, async work, operations, monitoring, and recovery when applicable.
+- Security: audit auth, object authorization, input validation, secrets, sessions, dependency risks, and uploads when applicable.
+- Do not presume user confirmation equals tested evidence. Report PASS, FAIL, NEEDS VERIFICATION, or NOT APPLICABLE per control.
+- Deliver GO, CONDITIONAL GO, or NO-GO with evidence and blockers. No merge, production deployment, credential rotation, or protection removal without separate authorization.
+- Full authoritative checklists and scripts reside in this npm package. Goose hints are a summary, not a full AgentSkills installation.
+${GOOSE_END}`;
 }
 
-function installGooseHints(options) {
-  const content = gooseHintsContent();
-
+function installGoose(options) {
+  const content = gooseContent(options);
+  const original = existsSync(options.target) ? readFileSync(options.target, "utf8") : "";
+  const blockPattern = /# pre-ship-checklist-skill:start[\s\S]*?# pre-ship-checklist-skill:end/g;
+  const next = blockPattern.test(original)
+    ? original.replace(blockPattern, content)
+    : original.trim() ? `${original.replace(/\s+$/u, "")}\n\n${content}\n` : `${content}\n`;
   if (options.dryRun) {
     console.log(`Would update Goose hints file: ${options.target}`);
     console.log(content);
     return 0;
   }
-
   mkdirSync(dirname(options.target), { recursive: true });
-
-  const existing = existsSync(options.target) ? readFileSync(options.target, "utf8") : "";
-  const blockPattern = new RegExp(`${GOOSE_BLOCK_START}[\\s\\S]*?${GOOSE_BLOCK_END}`);
-  let nextContent;
-
-  if (blockPattern.test(existing)) {
-    nextContent = existing.replace(blockPattern, content);
-  } else if (existing.trim().length > 0) {
-    nextContent = `${existing.replace(/\s+$/u, "")}\n\n${content}\n`;
-  } else {
-    nextContent = `${content}\n`;
-  }
-
-  writeFileSync(options.target, nextContent, "utf8");
+  writeFileSync(options.target, next, "utf8");
   console.log(`Installed Goose pre-ship hints to ${options.target}`);
   return 0;
 }
 
-function install(options) {
-  if (options.agent.format === "goosehints") {
-    return installGooseHints(options);
-  }
-
-  return installSkillFiles(options);
-}
-
 function doctor(options) {
-  console.log(`Package version: ${readPackageVersion()}`);
-  console.log(`Agent: ${options.agent.label}`);
-  console.log(`Scope: ${options.scope}`);
-  console.log(`Target: ${options.target}`);
-  console.log("Install plan:");
-
-  for (const item of getInstallPlan(options)) {
-    const status = item.kind === "goosehints"
-      ? existsSync(item.destination) ? "exists" : "missing"
-      : existsSync(item.source) ? "packaged" : "missing source";
+  console.log(`Package version: ${version()}\nAgent: ${options.agent.label}\nScope: ${options.scope}\nTarget: ${options.target}`);
+  if (options.agent.format === "goosehints") {
+    const installed = existsSync(options.target) && readFileSync(options.target, "utf8").includes(GOOSE_START);
+    console.log(`Goose hints: ${installed ? "installed" : "missing"}`);
+    return installed ? 0 : 1;
+  }
+  const plan = installPlan(options);
+  let errors = 0;
+  for (const item of plan) {
+    const status = !existsSync(item.destination) ? "missing"
+      : fileEqual(item.source, item.destination) ? "installed" : "changed";
+    if (status !== "installed") errors += 1;
     console.log(`- ${item.destination}: ${status}`);
   }
+  return errors === 0 ? 0 : 1;
 }
 
 function main(args) {
-  if (args.length === 0 || args[0] === "--help" || args[0] === "-h" || args[0] === "help") {
+  if (args.length === 0 || ["--help", "-h", "help"].includes(args[0])) {
     printHelp();
     return 0;
   }
-
-  if (args[0] === "--version" || args[0] === "-v") {
-    console.log(readPackageVersion());
+  if (["--version", "-v"].includes(args[0])) {
+    console.log(version());
     return 0;
   }
-
   if (args[0] === "targets") {
-    listTargets();
+    for (const [name, agent] of Object.entries(AGENTS)) {
+      if (agent.aliasFor) continue;
+      console.log(`${name}: ${agent.label}\n  global:  ${targetFor(name, "global")}\n  project: ${targetFor(name, "project")}`);
+    }
     return 0;
   }
-
+  if (args[0] === "list") {
+    SKILLS.forEach(name => console.log(name));
+    return 0;
+  }
+  if (!["install", "doctor"].includes(args[0])) throw new Error(`Unknown command: ${args[0]}`);
   const options = parseOptions(args);
-
-  if (options.command === "install") {
-    return install(options);
-  }
-
-  if (options.command === "list") {
-    listSkills();
-    return 0;
-  }
-
-  if (options.command === "doctor") {
-    doctor(options);
-    return 0;
-  }
-
-  throw new Error(`Unknown command: ${options.command}`);
+  if (options.command === "doctor") return doctor(options);
+  return options.agent.format === "goosehints" ? installGoose(options) : installFiles(options);
 }
 
 try {

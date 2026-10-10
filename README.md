@@ -1,261 +1,111 @@
-# pre-ship-checklist
+# Pre-Ship Checklist Skill
 
-Two production readiness skills for Claude Code. Run them before you ship anything.
-
----
-
-## Installation
-
-You can install the checklists from npm with `npx`, globally, inside a single project, or manually.
-
-By default, the installer targets Claude Code. Use `--agent` to install for OpenClaw, Hermes, Goose, Pi, or a generic AgentSkills directory.
-
-### Run once with npx for Claude Code
-
-```sh
-npx pre-ship-checklist-skill install
-```
-
-This installs both `.skill` files into your Claude skills directory.
-
-### Install for other agents
-
-```sh
-npx pre-ship-checklist-skill install --agent openclaw
-npx pre-ship-checklist-skill install --agent hermes
-npx pre-ship-checklist-skill install --agent pi
-npx pre-ship-checklist-skill install --agent goose
-npx pre-ship-checklist-skill install --agent agents
-```
-
-OpenClaw, Hermes, Pi, and `agents` installs use AgentSkills-style folders:
-
-```text
-<target>/
-  pre-launch-checklist/
-    SKILL.md
-  vibe-coder-security-checklist/
-    SKILL.md
-```
-
-Goose does not use the same skill-folder convention, so `--agent goose` installs a managed pre-ship checklist block into `.goosehints`.
-
-Show all supported targets:
-
-```sh
-npx pre-ship-checklist-skill targets
-```
-
-### Install globally
-
-```sh
-npm install --global pre-ship-checklist-skill
-pre-ship-checklist-skill install
-pre-ship-checklist-skill install --agent openclaw
-```
-
-Use this if you want the installer command available from any folder.
-
-### Install in a project
-
-```sh
-npm install --save-dev pre-ship-checklist-skill
-npx pre-ship-checklist-skill install
-npx pre-ship-checklist-skill install --agent pi --scope project
-```
-
-Use this if you want the installer version pinned in a specific project's `package.json`.
-
-You can also add a project script:
-
-```json
-{
-  "scripts": {
-    "install:pre-ship-skills": "pre-ship-checklist-skill install"
-  }
-}
-```
-
-Then run:
-
-```sh
-npm run install:pre-ship-skills
-```
-
-### Install to a custom directory
-
-```sh
-npx pre-ship-checklist-skill install --target /path/to/claude/skills
-npx pre-ship-checklist-skill install --agent hermes --target /path/to/hermes/skills
-npx pre-ship-checklist-skill install --agent goose --target /path/to/.goosehints
-```
-
-You can also set agent-specific environment variables:
-
-```sh
-CLAUDE_SKILLS_DIR=/path/to/claude/skills npx pre-ship-checklist-skill install
-OPENCLAW_SKILLS_DIR=/path/to/openclaw/skills npx pre-ship-checklist-skill install --agent openclaw
-HERMES_SKILLS_DIR=/path/to/hermes/skills npx pre-ship-checklist-skill install --agent hermes
-PI_SKILLS_DIR=/path/to/pi/skills npx pre-ship-checklist-skill install --agent pi
-AGENTS_SKILLS_DIR=/path/to/.agents/skills npx pre-ship-checklist-skill install --agent agents
-GOOSE_HINTS_FILE=/path/to/.goosehints npx pre-ship-checklist-skill install --agent goose
-```
-
-### Install directly from GitHub
-
-If you want the latest repository version before a new npm release is published, install directly from GitHub:
-
-```sh
-npx --yes github:xPAlien/pre_ship_checklist_skill install
-npm install --global github:xPAlien/pre_ship_checklist_skill
-npm install --save-dev github:xPAlien/pre_ship_checklist_skill
-```
-
-### Installer commands
-
-```sh
-pre-ship-checklist-skill install
-pre-ship-checklist-skill install --agent openclaw --scope project
-pre-ship-checklist-skill install --dry-run
-pre-ship-checklist-skill install --force
-pre-ship-checklist-skill list
-pre-ship-checklist-skill targets
-pre-ship-checklist-skill doctor
-pre-ship-checklist-skill --help
-```
-
-### Manual install
-
-1. Download the `.skill` file(s) you want
-2. Drop them into your Claude skills directory
-3. Reload Claude
-
----
+One production release workflow with two independent specialist audits. Built for Codex, Claude Code, and compatible AgentSkills agents. The `ship` skill provides an evidence-based release gate, not an automatic deployment.
 
 ## Skills
 
-### pre-launch-checklist
+| Skill | Scope | Command |
+| --- | --- | --- |
+| `ship` | Eight release gates spanning security, data, functional QA, accessibility, performance, SEO/privacy, hosting, and cutover | `$ship` in Codex or `/ship` in Claude Code |
+| `pre-launch-checklist` | 25 infrastructure and operations checks for applicable systems | `/pre-launch-checklist` in Claude Code |
+| `vibe-coder-security-checklist` | 36 authentication, API, database, and infrastructure security checks | `/vibe-coder-security-checklist` in Claude Code |
 
-A 25-point ops and infrastructure audit. Covers the failure modes that kill apps in production: load, database, async work, resilience, observability, and operations. Works as an interactive audit. Flags blockers versus warnings. Never tells you you're ready if blockers are unresolved.
+`ship` is the recommended entry point. It optionally draws on the specialist checklists, deduplicates overlapping risks, and issues one report. Each specialist also works by itself. The 40 checklist items from the original Ship brief appear in `ship/references/source-mapping.md`.
 
-### vibe-coder-security-checklist
+## Installation
 
-A 36-point security audit for web applications. Covers authentication, API security, database hardening, infrastructure configuration, and code hygiene. Designed for developers shipping to clients or going live. Flags blockers (fix before delivery) versus warnings (fix within 30 days).
+The default installer installs all three skills globally into Claude Code folders using the documented `SKILL.md` convention.
 
----
+```sh
+npx pre-ship-checklist-skill install
+```
 
-## What They Do
+For Codex:
 
-When triggered, each skill:
+```sh
+npx pre-ship-checklist-skill install --agent codex
+```
 
-1. Collects your stack (framework, hosting, auth, database) to tailor every fix
-2. Offers a **full audit** or **fast scan** (blockers only) mode
-3. Walks through items one at a time with progress tracking
-4. Produces a structured report: BLOCKERS / WARNINGS / NOT APPLICABLE / PASSED
+For both:
 
----
+```sh
+npx pre-ship-checklist-skill install --agent claude
+npx pre-ship-checklist-skill install --agent codex
+```
 
-## Trigger Phrases
+For a single project, add `--scope project`. Use `--only ship` to install only the main release skill. Use `--target <path>` for a custom skills directory and `--dry-run` to see the file plan.
 
-### pre-launch-checklist
+```sh
+npx pre-ship-checklist-skill install --agent codex --scope project --dry-run
+npx pre-ship-checklist-skill doctor --agent codex
+npx pre-ship-checklist-skill list
+npx pre-ship-checklist-skill targets
+```
 
-- "going live" / "about to launch" / "pre-launch"
-- "before I ship" / "ready to deploy" / "is my app ready"
-- "production checklist" / "launch checklist"
+### Supported targets
 
-Also fires proactively when you describe finishing a build and start talking about deployment.
+| Agent | Global destination | Project destination |
+| --- | --- | --- |
+| Claude Code | `~/.claude/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` |
+| Codex | `~/.agents/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
+| OpenClaw | `~/.openclaw/skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` |
+| Hermes | `~/.hermes/skills/<name>/SKILL.md` | `.hermes/skills/<name>/SKILL.md` |
+| Pi | `~/.pi/agent/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` |
+| AgentSkills | `~/.agents/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
+| Goose | managed `.goosehints` block | managed `.goosehints` block |
 
-### vibe-coder-security-checklist
+The `ship` folder retains its `references/`, `scripts/`, `templates/`, and `tests/` subfolders on installation. Goose installs only a summary because Goose follows a different hints convention.
 
-- "security checklist" / "security review" / "security audit"
-- "client delivery" / "before I deliver"
-- "check for vulnerabilities" / "is my app secure" / "harden my app"
+### Safe upgrade from v0.2.x
 
-Also fires proactively when you've finished an app with authentication or user data and start talking about delivery.
+The v0.2.x Claude installer placed two flat `.skill` files in `~/.claude/skills`. The new installer writes folder-based `SKILL.md` packages. It does not delete or overwrite old flat files. After validating v0.3.0 with `doctor`, inspect and remove obsolete flat copies manually if they are still active. If a managed file differs, installation stops before any file is written. `--force` overwrites managed files only after you review the conflicts.
 
----
+To pin a project version, add the package as a development dependency and run its installer from npm scripts. Direct GitHub installation also works:
 
-## Checklists
+```sh
+npm install --save-dev pre-ship-checklist-skill@0.3.0
+npx pre-ship-checklist-skill install --agent codex --scope project
+```
 
-### pre-launch-checklist — 25 Items
+A public npm release for v0.3.0 is a separate publishing step. Until a release exists, use a GitHub package source or a local checkout rather than assuming npm already serves v0.3.0.
 
-| # | Item | Category | Severity |
-|---|------|----------|----------|
-| 1 | Load testing before launch | Load and Scale | Blocker |
-| 2 | Session data not in server memory | Load and Scale | Blocker |
-| 3 | File uploads go to object storage | Load and Scale | Blocker |
-| 4 | CDN in front of static assets | Load and Scale | Warning |
-| 5 | Database read replica exists | Database | Warning |
-| 6 | All foreign key columns indexed | Database | Blocker |
-| 7 | Migrations not auto-run on app start | Database | Warning |
-| 8 | Backups tested with actual restore | Database | Warning |
-| 9 | Multi-step writes use transactions | Database | Blocker |
-| 10 | Search queries parameterized or indexed | Database | Warning |
-| 11 | Email sending offloaded to a queue | Async | Warning |
-| 12 | Background tasks run in a queue | Async | Warning |
-| 13 | No hardcoded secrets in CI | Resilience | Blocker |
-| 14 | Rate limiting configured | Resilience | Blocker |
-| 15 | Outbound HTTP calls have timeouts | Resilience | Blocker |
-| 16 | Circuit breakers on external calls | Resilience | Warning |
-| 17 | Fallback for critical third-party APIs | Resilience | Warning |
-| 18 | WebSockets handled by stateful service | Resilience | Warning |
-| 19 | Error alerting configured | Observability | Blocker |
-| 20 | Logs go to centralized service | Observability | Warning |
-| 21 | Health check endpoint exists | Observability | Blocker |
-| 22 | API responses compressed | Observability | Warning |
-| 23 | Graceful shutdown implemented | Operations | Warning |
-| 24 | Memory leak detection in place | Operations | Warning |
-| 25 | Runbook exists for common incidents | Operations | Blocker |
+## Run the release audit
 
-### vibe-coder-security-checklist — 36 Items
+```text
+$ship Audit this repository for production. Do a read-only review first, identify the exact release revision, evaluate all applicable gates, collect evidence and return a GO, CONDITIONAL GO, or NO-GO result. Do not merge, deploy, rotate credentials, change production data, or alter deployment protection.
+```
 
-| # | Item | Category | Severity |
-|---|------|----------|----------|
-| 1 | Passwords hashed with bcrypt or argon2 | Authentication | Blocker |
-| 2 | Tokens in httpOnly cookies, not localStorage | Authentication | Blocker |
-| 3 | JWT secret random and at least 32 characters | Authentication | Blocker |
-| 4 | Access tokens expire within 15–60 minutes | Authentication | Warning |
-| 5 | Refresh token rotation implemented | Authentication | Warning |
-| 6 | Rate limiting on /login and /register | Authentication | Blocker |
-| 7 | Account lockout after repeated failures | Authentication | Warning |
-| 8 | Sessions invalidated server-side on logout | Authentication | Blocker |
-| 9 | Email verification required before access | Authentication | Warning |
-| 10 | Password reset tokens expire and are single-use | Authentication | Blocker |
-| 11 | Every route verified for authentication | API Security | Blocker |
-| 12 | Authorization checked per user (own data only) | API Security | Blocker |
-| 13 | All inputs validated with schema validation | API Security | Blocker |
-| 14 | Responses never include passwords or hashes | API Security | Warning |
-| 15 | Error messages don't reveal internals | API Security | Warning |
-| 16 | Rate limiting on all public endpoints | API Security | Warning |
-| 17 | CORS restricted to your domain | API Security | Blocker |
-| 18 | HTTPS enforced, HTTP redirected | API Security | Blocker |
-| 19 | CSRF protection implemented | API Security | Blocker |
-| 20 | Security headers configured | API Security | Warning |
-| 21 | No SQL string concatenation | Database | Blocker |
-| 22 | App uses limited-permission DB user | Database | Warning |
-| 23 | Database not publicly accessible | Database | Warning |
-| 24 | Backups configured and restore tested | Database | Warning |
-| 25 | Sensitive fields encrypted at rest | Database | Warning |
-| 26 | All secrets in environment variables | Infrastructure | Blocker |
-| 27 | `.env` not in git history | Infrastructure | Blocker |
-| 28 | SSL certificate installed and valid | Infrastructure | Warning |
-| 29 | Server not running as root | Infrastructure | Warning |
-| 30 | Only ports 80 and 443 publicly accessible | Infrastructure | Warning |
-| 31 | No `console.log` in production build | Code | Warning |
-| 32 | `npm audit` run, criticals resolved | Code | Warning |
-| 33 | Dependency lockfile committed to repo | Code | Warning |
-| 34 | No hardcoded credentials in codebase | Code | Blocker |
-| 35 | File uploads validated for type, size, path | Code | Warning |
-| 36 | MFA available for sensitive/financial apps | Code | Warning |
+In Claude Code, use `/ship` in place of `$ship`.
 
----
+The skill returns `PASS`, `FAIL`, `NEEDS VERIFICATION`, or `NOT APPLICABLE` on applicable controls and prioritizes P0 through P3 findings. Unverified critical controls block a release. A GO verdict does not authorize production changes.
 
-## Contributing
+The offline scanner is a hint generator, not a comprehensive security test:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+```sh
+python ship/scripts/preflight.py --root /path/to/project
+python -m unittest discover -s ship/tests -v
+```
 
----
+## Maintainer checks
+
+```sh
+npm test
+npm run test:ship
+npm run pack:dry-run
+node bin/pre-ship-checklist-skill.js install --agent codex --dry-run
+```
+
+The CI workflow runs Node tests, the Python preflight tests, and an npm package dry run. The installer preserves non-managed files and does not perform deployments.
+
+## Maintenance and limits
+
+- The older 25-point and 36-point audits remain independent and keep their original names and scopes. Their applicability and default severities must be evaluated against the inspected project.
+- The new Ship checklist is the authority for one consolidated release verdict, avoiding duplicate findings.
+- No agent report substitutes for branch protection, required CI checks, provider deployment permissions, or a named release approver.
+- Production deployment, migration, secret rotation, domain promotion, and disabling access protections each require explicit authorization.
+
+See [ship/README.md](ship/README.md) for the complete Ship package, [CLAUDE.md](CLAUDE.md) for maintainer conventions, and [CONTRIBUTING.md](CONTRIBUTING.md) for PR guidance.
 
 ## License
 
-MIT
+MIT.

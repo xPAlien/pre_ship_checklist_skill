@@ -1,12 +1,13 @@
 {
   "name": "pre-ship-checklist-skill",
-  "version": "0.2.0",
-  "description": "Installable pre-ship production and security checklist skills for AI coding agents.",
+  "version": "0.3.0",
+  "description": "Installable evidence-based release, infrastructure and security audit skills for AI coding agents.",
   "bin": {
     "pre-ship-checklist-skill": "./bin/pre-ship-checklist-skill.js"
   },
   "files": [
     "*.skill",
+    "ship",
     "bin",
     "README.md",
     "CLAUDE.md",
@@ -15,21 +16,12 @@
   ],
   "scripts": {
     "test": "node --test",
+    "test:ship": "python -m unittest discover -s ship/tests -v",
     "pack:dry-run": "npm pack --dry-run"
   },
   "keywords": [
-    "claude",
-    "claude-code",
-    "openclaw",
-    "hermes",
-    "goose",
-    "pi",
-    "agent-skills",
-    "skill",
-    "pre-ship",
-    "checklist",
-    "security",
-    "production-readiness"
+    "claude", "claude-code", "codex", "vercel", "production-readiness",
+    "openclaw", "hermes", "goose", "pi", "agent-skills", "security", "pre-ship"
   ],
   "author": "xPAlien",
   "license": "MIT",

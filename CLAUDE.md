@@ -1,47 +1,34 @@
-# CLAUDE.md
+# Maintainer guidance
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This repository distributes three skill packages: the main `ship` release gate and two independent specialist checklists. Do not collapse the specialists into a single checklist. Do not create duplicate findings when the `ship` skill coordinates specialist checks.
 
-## What This Repo Is
+## Source ownership
 
-Two Claude Code skills for production readiness audits. Run them before shipping any web application.
+- `ship/SKILL.md`: one evidence-based production release workflow and its GO/NO-GO decision policy.
+- `ship/references/`: conditional gate criteria, Vercel-specific guidance, source mapping, and CI policy.
+- `ship/scripts/preflight.py`: offline, read-only structural hints, not a GO/NO-GO engine.
+- `pre-launch-checklist.skill`: independent 25-item infrastructure audit.
+- `vibe-coder-security-checklist.skill`: independent 36-item security audit.
+- `bin/pre-ship-checklist-skill.js`: installer and self-checker for supported agents.
+- `test/cli.test.js` and `ship/tests/`: regression tests.
 
-## Skills
+## Standards
 
-| File | Items | Focus |
-|------|-------|-------|
-| `pre-launch-checklist.skill` | 25 | Ops and infrastructure: load, database, async, resilience, observability, operations |
-| `vibe-coder-security-checklist.skill` | 36 | Security: auth, API, database hardening, infrastructure, code hygiene |
+1. All three installed folder-based skills use `<skills>/<name>/SKILL.md`. The installer copies all of `ship/` and converts the two original flat sources to folder-based `SKILL.md` files.
+2. Never delete old skill files or overwrite changed installed files by default. Report collisions before writing anything. `--force` affects only managed paths.
+3. Keep two specialist sources independently usable. Keep original checklist item counts accurate. Avoid universal policy claims for inherently conditional requirements.
+4. Security, data loss, missing release approval, and critical unknowns fail the central Ship gate. Do not treat an agent report as a CI-enforced block.
+5. In `audit` mode, collect evidence without production or Git mutations. No unauthorized deployment, merge, credential rotation, production migration, protection change, or live payment.
+6. Every checklist change needs corresponding documentation or regression tests. New checklist items should have stable IDs or a clear ordinal mapping.
+7. Keep `package.json` version, root README, and `ship/SKILL.md` metadata aligned on release changes.
+8. Check installer `--agent codex`, `--agent claude`, `--scope project`, idempotency, changed-file collisions, and packaged references in tests.
 
-The two skills are intentionally separate. The pre-launch checklist covers infrastructure failure modes; the security checklist covers application-layer vulnerabilities. They have overlapping items (rate limiting, secrets, backups) scoped differently — do not merge them.
+## Required verification
 
-## Skill File Format
-
+```sh
+npm test
+python -m unittest discover -s ship/tests -v
+npm pack --dry-run
 ```
----
-name: skill-name
-description: "trigger phrases and activation conditions"
----
 
-# Title
-
-## How to Use This Skill
-## The N Items
-## Output Format
-```
-
-The `description` field drives auto-activation. It must include all trigger phrases listed in `README.md`.
-
-## Severity
-
-Severity is embedded inline on each item as `[BLOCKER]` or `[WARNING]`. Do not maintain a separate numbered list — those go stale when items are added or reordered.
-
-- **BLOCKER** — must be resolved before launch/delivery
-- **WARNING** — fix within 30 days
-
-## Editing Rules
-
-- Both `.skill` files are plain text. Edit directly.
-- Any item change must be reflected in the skill file and the summary table in `README.md`.
-- The output format in each skill must always include four buckets: BLOCKERS / WARNINGS / NOT APPLICABLE / PASSED.
-- `SKILL.md` has been removed. There is no zip distribution format in this repo.
+Do not merge or publish a release without repository-owner approval. Opening a PR is not permission to deploy.

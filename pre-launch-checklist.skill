@@ -13,7 +13,7 @@ A 25-point checklist covering the failure modes that kill apps in production. Ru
 
 ### Step 1 — Collect the stack
 
-Before running any checklist items, ask the user:
+Before running any checklist items, inspect repository and provider configuration. Ask only for missing context:
 
 - **Hosting**: Vercel, Railway, Render, AWS, Fly.io, DigitalOcean, other?
 - **Backend/API**: Next.js API routes, Express, FastAPI, Django, Rails, other?
@@ -27,19 +27,23 @@ Use these answers to tailor every fix to the user's specific stack. For example:
 
 Ask the user:
 - **Full audit** — all 25 items (recommended for first launch)
-- **Fast scan** — blockers only (9 items, for experienced devs doing a final check)
+- **Fast scan** — 11 baseline blocker items, marking irrelevant controls NOT APPLICABLE with a reason
 
 Blockers: items 1, 2, 3, 6, 9, 13, 14, 15, 19, 21, 25
 
 ### Step 3 — Run the checklist
 
-Present items one at a time. Show progress ("Item X of 25" or "Item X of 9" in fast mode). For each item the user confirms: **yes**, **no**, or **not applicable**.
+Present items one at a time. Show progress ("Item X of 25" or "Item X of 9" in fast mode). For each item, record PASS, FAIL, NEEDS VERIFICATION, or NOT APPLICABLE with evidence. Verbal assurance alone does not verify a critical control.
 
-- "No" on a **[BLOCKER]** = must fix before launch
-- "No" on a **[WARNING]** = fix within 30 days
-- "Not applicable" = skip with a brief reason noted
+- Applicable failed baseline blockers require correction before release.
+- Warning due dates depend on real risk and an accountable owner, not a universal 30-day deadline.
+- Unknown critical checks block release. For N/A, record a specific reason.
 
 ---
+
+## Applicability and evidence
+
+Baseline blocker and warning labels are screening defaults, not universal architecture mandates. For each item, inspect actual project behavior, code, tests and provider evidence. Static sites need no database, email queue or protected user routes unless they implement these features. Unverified critical checks remain blockers for the main `ship` release decision. Distinguish evidence from user assurances.
 
 ## The 25 Items
 
@@ -63,13 +67,13 @@ Present items one at a time. Show progress ("Item X of 25" or "Item X of 9" in f
 
 ### Database
 
-5. **[WARNING] Database read replica exists**
-   - Risk: All reads and writes hit one machine. First real traffic spike kills query performance.
-   - Fix: Add a read replica. Route read-heavy queries there.
+5. **[WARNING] Read scaling approach is justified by measured database workload**
+   - Risk: Unmeasured read bottlenecks can cause latency spikes under load.
+   - Fix: Measure query plans, throughput and latency. Apply indexes, cache, pooling or a read replica only when needed.
 
-6. **[BLOCKER] All foreign key columns are indexed**
-   - Risk: Every JOIN is a full table scan. Slow at 100 rows. Broken at 100,000.
-   - Fix: Index every foreign key. Run EXPLAIN on your slowest queries now.
+6. **[BLOCKER] Critical joins and foreign-key lookups perform adequately under expected load**
+   - Risk: Unindexed hot joins and filters can cause avoidable latency or locks.
+   - Fix: Inspect actual query plans and index frequently joined or filtered columns where justified.
 
 7. **[WARNING] DB migrations do not run automatically on app start**
    - Risk: Two instances deploy at the same time. Both run migrations. Race condition. Data inconsistency.
@@ -89,13 +93,13 @@ Present items one at a time. Show progress ("Item X of 25" or "Item X of 9" in f
 
 ### Async and Background Work
 
-11. **[WARNING] Email sending is offloaded to a queue**
+11. **[WARNING] Email sending has reliable delivery and bounded request latency**
     - Risk: Slow email provider = slow API response for every request that triggers one.
-    - Fix: Push email jobs to a queue (BullMQ, Sidekiq, SQS). Never send inline.
+    - Fix: Use durable queues when provider latency or retries threaten the user flow. For small bounded calls, strict timeouts may suffice.
 
-12. **[WARNING] Background tasks run in a queue, not blocking the request cycle**
+12. **[WARNING] Slow or retryable jobs use appropriate asynchronous execution**
     - Risk: Everything is blocking. One slow task pauses everything behind it.
-    - Fix: Use a job queue for any task that takes more than 200ms.
+    - Fix: Queue work when product latency budgets, reliability, or retries require it. Choose an execution model supported by the host.
 
 ### Resilience
 
@@ -133,9 +137,9 @@ Present items one at a time. Show progress ("Item X of 25" or "Item X of 9" in f
     - Risk: Logs rotate off. Incident happens. No history to debug with.
     - Fix: Ship logs to Datadog, Logtail, CloudWatch, or equivalent from day one.
 
-21. **[BLOCKER] Health check endpoint exists**
+21. **[BLOCKER] An appropriate production health signal exists for the release unit**
     - Risk: Load balancer sends traffic to crashed instances. Users get 502s.
-    - Fix: Build a /health endpoint that checks DB connectivity and returns 200 when healthy.
+    - Fix: Use host-native health checks or a minimal readiness endpoint as appropriate. Do not expose sensitive configuration or full dependency internals.
 
 22. **[WARNING] API responses are compressed**
     - Risk: JSON payloads sent uncompressed. 10x the bandwidth they need to use.
@@ -151,7 +155,7 @@ Present items one at a time. Show progress ("Item X of 25" or "Item X of 9" in f
     - Risk: Memory grows slowly. Server hits 100%. Everything grinds to a halt. Restart. Repeat.
     - Fix: Set memory limits. Add heap profiling. Monitor RSS over time in your observability tool.
 
-25. **[BLOCKER] A runbook exists for common incidents**
+25. **[BLOCKER] An incident and rollback runbook covers applicable operational risks**
     - Risk: Something breaks at 2 AM. Nobody knows what to do. Everyone panics.
     - Fix: Document the 5 most likely failure modes and the exact steps to recover from each.
 
@@ -175,7 +179,7 @@ PASSED:
 - [count] of [applicable count] items confirmed ready
 ```
 
-Never tell the user they are "ready to launch" if any BLOCKER items are unresolved.
+Never issue a GO verdict if an applicable blocker or critical unknown is unresolved. The specialist audit does not approve production deployment.
 
 ---
 

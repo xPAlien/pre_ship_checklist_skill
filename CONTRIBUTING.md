@@ -1,54 +1,30 @@
 # Contributing
 
-## Adding or changing checklist items
+## Source layout
 
-**Proposing a new item**
+The project contains an eight-gate release coordinator in `ship/` and two independent specialists in the root `.skill` files. Keep all three usable separately. Reuse risk evidence and deduplicate findings when the main `ship` skill coordinates an audit.
 
-Open an issue with:
-- The item name and category
-- The specific risk (what breaks, how an attacker exploits it)
-- A concrete fix (not a generic recommendation)
-- Whether it should be a BLOCKER or WARNING, and why
+## Propose a checklist change
 
-The bar for a new item: it must be a real failure mode that ships regularly in production apps built without security expertise. Generic best practices that require deliberate neglect don't qualify.
+Record the risk, affected project types, evidence for the control, severity when applicable, and smallest practical correction. Avoid universal requirements for stack- or risk-specific features. Examples: public sites do not need auth, internal APIs do not need sitemaps, and managed platforms do not always need read replicas or separate WebSocket hosts.
 
-**Blocker vs Warning**
+The specialist audits retain 25 and 36 numbered checks. Preserve numbering and update any summaries when items change. The central Ship checklist uses stable `Gx-NN` identifiers. Map newly added source material and avoid duplicate checks.
 
-- **Blocker** — the app should not ship with this unresolved. Exploitable by a non-expert attacker, or causes data loss or downtime on first real traffic.
-- **Warning** — serious but not immediately catastrophic. A motivated attacker could exploit it, or it will cause problems at scale. Fix within 30 days.
+## Submit a PR
 
-When in doubt, propose as Warning. Blockers are reserved for items where shipping without the fix is indefensible.
+1. Branch from `master` and keep the scope reviewable.
+2. Update the appropriate skill files and documentation.
+3. Add regression tests for changed installer behavior or preflight logic.
+4. Run `npm test`, `python -m unittest discover -s ship/tests -v`, and `npm pack --dry-run`.
+5. Confirm both `--agent codex` and `--agent claude` still install all managed files into skill folders, and that `--dry-run` leaves the destination unchanged.
+6. Include the release impact, version bump, tests, and any migration notes in the PR description.
 
-## Submitting a PR
+Never merge, publish npm, or deploy another project without separate authorization.
 
-1. Fork the repo and create a branch from `main`
-2. Edit the relevant `.skill` file
-3. Update `README.md` to reflect the change (item tables, severity column)
-4. Keep one concern per PR — don't bundle new items with rewording existing ones
+## Severity and applicability
 
-## Skill file format
+The specialist checklists use baseline `[BLOCKER]` and `[WARNING]` labels to prompt risk review. The Ship release decision is based on actual applicability, evidence, and P0 through P3 risk. A baseline label alone does not establish a universal deployment requirement. Unknown critical controls remain release blockers. Findings need observed evidence rather than only user assurances.
 
-```
----
-name: skill-name
-description: "trigger phrases and activation conditions"
----
+## Distribution
 
-# Title
-
-## How to Use This Skill
-[stack intake, mode selection, progress instructions]
-
-## The N Items
-
-### Category
-
-N. **[BLOCKER|WARNING] Item name**
-   - Risk: [what goes wrong and how]
-   - Fix: [specific remediation, not generic advice]
-
-## Output Format
-[report structure]
-```
-
-Severity must be embedded inline on each item as `[BLOCKER]` or `[WARNING]`. Do not maintain a separate numbered list of blocker item numbers — those lists go stale when items are added or reordered.
+Keep the npm `files` allowlist accurate. Every AgentSkills target receives a directory with `SKILL.md`, and the full Ship folder retains references and preflight helpers. The original root `.skill` sources remain for compatibility. Never silently remove existing user modifications during installation.

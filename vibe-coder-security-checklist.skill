@@ -13,7 +13,7 @@ description: "Security checklist for web applications before shipping to a clien
 
 ### Step 1 — Collect the stack
 
-Before running any checklist items, ask the user:
+Before running any checklist items, inspect the repository and provider configuration. Ask only for missing context:
 
 - **Frontend framework**: Next.js, Nuxt, SvelteKit, plain React, other?
 - **Backend/API**: Same framework, Express, FastAPI, Django, Rails, other?
@@ -27,35 +27,39 @@ Use these answers to tailor every fix. "Store tokens in httpOnly cookies" looks 
 
 Ask the user:
 - **Full audit** — all 36 items (recommended before first client delivery)
-- **Fast scan** — blockers only (15 items, for experienced devs doing a final check)
+- **Fast scan** — 16 baseline blocker items, marking irrelevant controls NOT APPLICABLE with a reason
 
-Blockers: items 1, 2, 3, 6, 8, 10, 11, 12, 13, 17, 18, 19, 24, 25, 31, 34, 36
+Blockers: items 1, 2, 3, 6, 8, 10, 11, 12, 13, 17, 18, 19, 21, 26, 27, 34
 
 ### Step 3 — Run the checklist
 
-Present items one at a time. Show progress ("Item X of 36" or "Item X of 15" in fast mode). For each item the user confirms: **yes**, **no**, or **not applicable**.
+Present items one at a time. Show progress ("Item X of 36" or "Item X of 15" in fast mode). For each item, record PASS, FAIL, NEEDS VERIFICATION, or NOT APPLICABLE with evidence. Verbal assurance alone does not verify a critical control.
 
-- "No" on a **[BLOCKER]** = must fix before delivery
-- "No" on a **[WARNING]** = fix within 30 days
-- "Not applicable" = skip with a brief reason noted
+- Applicable failed baseline blockers require correction before release.
+- Warning due dates depend on real risk and an accountable owner, not a universal 30-day deadline.
+- Unknown critical checks block release. For N/A, record a specific reason.
 
 ---
+
+## Applicability and evidence
+
+Baseline blocker and warning labels are screening defaults, not universal architecture mandates. For each item, inspect actual project behavior, code, tests and provider evidence. Static sites need no database, email queue or protected user routes unless they implement these features. Unverified critical checks remain blockers for the main `ship` release decision. Distinguish evidence from user assurances.
 
 ## The 36 Items
 
 ### Authentication
 
-1. **[BLOCKER] Passwords hashed with bcrypt or argon2 (minimum 12 rounds)**
+1. **[BLOCKER] Password login uses adaptive password hashing or a trusted identity provider**
    - Risk: MD5, SHA1, or plain-text passwords are cracked in minutes after a database breach.
-   - Fix: Use bcrypt with cost factor ≥12 or argon2id with recommended parameters.
+   - Fix: Use a reviewed adaptive password hash such as Argon2id or bcrypt with current work factors. If fully delegated to a provider or using passkeys, inspect provider configuration.
 
-2. **[BLOCKER] Tokens stored in httpOnly cookies, not localStorage**
+2. **[BLOCKER] Browser session credentials follow a secure storage and rotation design**
    - Risk: Any XSS vulnerability can steal tokens from localStorage. httpOnly cookies are inaccessible to JavaScript.
-   - Fix: Set `HttpOnly; Secure; SameSite=Strict` on all auth cookies.
+   - Fix: Prefer HttpOnly and Secure cookies with appropriate SameSite on browser sessions. For other token designs, review XSS exposure, expiry, rotation and revocation.
 
-3. **[BLOCKER] JWT secret is random, at least 32 characters, not copied from a tutorial**
+3. **[BLOCKER] JWT signing keys and authentication secrets match the algorithm and trust model**
    - Risk: Tutorial secrets like `secret` or `mysecret` are in public wordlists and brute-forced trivially.
-   - Fix: Generate with `openssl rand -hex 32`. Store in environment variables, never in source code.
+   - Fix: Use strong random symmetric keys or managed asymmetric signing keys as appropriate. Keep private signing material in environment-scoped secrets management.
 
 4. **[WARNING] Access tokens expire within 15 to 60 minutes**
    - Risk: Non-expiring tokens are permanently valid after theft.
@@ -69,9 +73,9 @@ Present items one at a time. Show progress ("Item X of 36" or "Item X of 15" in 
    - Risk: No rate limit means unlimited password guessing and account enumeration at machine speed.
    - Fix: Limit to 5–10 attempts per IP per minute. Use Upstash Redis or a middleware layer.
 
-7. **[WARNING] Account lockout after repeated login failures**
+7. **[WARNING] Authentication resists repeated password attempts without causing user lockout abuse**
    - Risk: Attacker can brute-force indefinitely even with rate limiting if limits reset too fast.
-   - Fix: Lock account after 10 consecutive failures. Require email unlock or timed reset.
+   - Fix: Use progressive rate limits, monitoring, step-up authentication, or bounded lockouts without enabling attacker-driven denial of service.
 
 8. **[BLOCKER] Sessions invalidated server-side on logout**
    - Risk: Client-side logout only removes the cookie but the token remains valid if stolen before logout.
@@ -111,17 +115,17 @@ Present items one at a time. Show progress ("Item X of 36" or "Item X of 15" in 
     - Risk: No rate limit means your API can be scraped, abused, or DoS'd without friction.
     - Fix: Apply a global rate limit at the edge (Cloudflare) or API layer (Upstash Redis).
 
-17. **[BLOCKER] CORS restricted to your domain — not wildcard `*`**
-    - Risk: Wildcard CORS allows any site to make credentialed requests to your API.
-    - Fix: Set `Access-Control-Allow-Origin` to your specific domain only.
+17. **[BLOCKER] CORS policy is correct for credentialed and public resource access**
+    - Risk: An overly broad credentialed cross-origin policy can expose private responses to untrusted origins.
+    - Fix: Restrict credentialed origins and test actual browser requests. Wildcard origins can be appropriate for intentionally public, non-credentialed responses.
 
 18. **[BLOCKER] HTTPS enforced, HTTP redirected**
     - Risk: HTTP exposes tokens, session cookies, and data to anyone on the network path.
     - Fix: Redirect all HTTP to HTTPS at the server or CDN level. Set HSTS headers.
 
-19. **[BLOCKER] CSRF protection implemented for state-changing requests**
+19. **[BLOCKER] Cookie-authenticated state changes resist CSRF**
     - Risk: A malicious site can trigger authenticated requests on behalf of a logged-in user.
-    - Fix: Use SameSite=Strict on cookies, or add CSRF tokens to all state-changing forms and API calls. Verify the Origin header server-side.
+    - Fix: Enforce Origin validation, SameSite policy and/or CSRF tokens for state-changing browser cookie sessions. Document why CSRF is N/A for token-only APIs.
 
 20. **[WARNING] Security headers configured**
     - Risk: Missing headers enable clickjacking, MIME sniffing, and XSS attacks that a single response header would prevent.
@@ -137,23 +141,23 @@ Present items one at a time. Show progress ("Item X of 36" or "Item X of 15" in 
     - Risk: Root database access means a compromised app can drop tables, create users, or exfiltrate everything.
     - Fix: Create a DB user with only SELECT, INSERT, UPDATE, DELETE on the application schema. No DDL permissions.
 
-23. **[WARNING] Database not publicly accessible**
+23. **[WARNING] Database network exposure is controlled and documented**
     - Risk: A publicly exposed database can be reached by any scanner on the internet.
-    - Fix: Place the database behind a VPC or firewall rule that only allows connections from your app servers.
+    - Fix: Prefer private access when available. For managed public endpoints, verify TLS, strong auth, least privilege, and provider network controls.
 
 24. **[WARNING] Backups configured and a restore has been tested**
     - Risk: Having backups you've never restored is not a backup strategy. You'll find out it's broken during an incident.
     - Fix: Run a full restore to a staging environment. Verify the data. Schedule this monthly.
 
-25. **[WARNING] Sensitive fields encrypted at rest**
+25. **[WARNING] Sensitive stored data receives suitable encryption and access controls**
     - Risk: PII, payment data, or health data stored in plaintext is fully exposed after any database breach.
-    - Fix: Encrypt sensitive columns at the application layer before writing. Use a KMS-managed key.
+    - Fix: Verify encryption at rest and access controls. Use field-level encryption and managed keys when justified by data classification and threat model.
 
 ### Infrastructure
 
-26. **[BLOCKER] All secrets in environment variables, not source code**
+26. **[BLOCKER] Private credentials use environment-scoped configuration or a secrets manager**
     - Risk: Hardcoded secrets get committed, pushed, and indexed by GitHub. Rotation is then insufficient.
-    - Fix: Move all secrets to environment variables or a secrets manager (Doppler, AWS Secrets Manager, Vault).
+    - Fix: Store private credentials in protected environment-scoped settings or a secrets manager. Keep them out of Git, client bundles and logs.
 
 27. **[BLOCKER] `.env` not in git history**
     - Risk: `.env` added and later removed is still in git history and accessible via `git log`.
@@ -167,15 +171,15 @@ Present items one at a time. Show progress ("Item X of 36" or "Item X of 15" in 
     - Risk: A compromised process running as root has full system access.
     - Fix: Run your app process as a non-root user. Use Docker's `USER` directive or system user accounts.
 
-30. **[WARNING] Only ports 80 and 443 publicly accessible**
+30. **[WARNING] Exposed network services match the deployment threat model**
     - Risk: Exposed database ports, admin panels, or debug endpoints are the most common initial attack vector.
-    - Fix: Firewall everything except 80 and 443. Access internal tools via SSH tunnel or VPN only.
+    - Fix: Restrict administrative ports and internal data services. Public ports depend on a reviewed platform and access policy.
 
 ### Code
 
-31. **[WARNING] No `console.log` statements in production build**
+31. **[WARNING] Production logs do not expose credentials, personal data or internal secrets**
     - Risk: Logs can leak internal data, tokens, or stack traces to anyone with browser DevTools open.
-    - Fix: Strip logs at build time (ESLint `no-console` rule, or a build plugin). Verify in the production bundle.
+    - Fix: Review real log payloads and shipped client bundles. Remove sensitive values and unsafe debug data, while preserving sanitized diagnostic logging.
 
 32. **[WARNING] `npm audit` run — all critical and high vulnerabilities resolved**
     - Risk: Known CVEs in your dependencies are public and actively exploited.
@@ -217,7 +221,7 @@ PASSED:
 - [count] of [applicable count] items confirmed secure
 ```
 
-Never tell the user their app is secure if any BLOCKER items are unresolved.
+Never issue security readiness if an applicable blocker or critical unknown is unresolved. The specialist audit does not approve production deployment.
 
 ---
 

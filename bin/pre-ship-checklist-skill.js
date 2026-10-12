@@ -5,6 +5,7 @@ const {
   copyFileSync,
   existsSync,
   mkdirSync,
+  lstatSync,
   readFileSync,
   readdirSync,
   statSync,
@@ -106,7 +107,9 @@ Options:
 
 Defaults: --agent claude --scope global --only all
 All folder-based agents receive <skills>/<name>/SKILL.md.
-Existing flat Claude .skill files are not removed automatically.`);
+Existing flat Claude .skill files are not removed automatically.
+Preferred manager: npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill
+See docs/skills-cli-migration.md before switching existing installations.`);
 }
 
 function parseOptions(args) {
@@ -168,18 +171,9 @@ function installPlan(options) {
   const plan = [];
   for (const skill of selectedSkills(options)) {
     const folder = join(options.target, skill);
-    if (skill === "ship") {
-      for (const source of walkFiles(join(ROOT, "ship"))) {
-        plan.push({
-          skill,
-          source,
-          destination: join(folder, relative(join(ROOT, "ship"), source))
-        });
-      }
-    } else {
-      const source = join(ROOT, `${skill}.skill`);
-      if (!existsSync(source)) throw new Error(`Missing packaged skill file: ${source}`);
-      plan.push({ skill, source, destination: join(folder, "SKILL.md") });
+    const sourceFolder = join(ROOT, "skills", skill);
+    for (const source of walkFiles(sourceFolder)) {
+      plan.push({ skill, source, destination: join(folder, relative(sourceFolder, source)) });
     }
   }
   return plan;
@@ -189,8 +183,45 @@ function fileEqual(a, b) {
   return readFileSync(a).equals(readFileSync(b));
 }
 
+function assertLegacyOwnership(options, plan) {
+  // Do not follow a manager-owned symlink, even with --force.
+  const boundary = dirname(options.target);
+  for (const item of plan) {
+    let cursor = item.destination;
+    while (cursor !== boundary) {
+      try {
+        if (lstatSync(cursor).isSymbolicLink()) {
+          throw new Error(`Refusing a symlink-managed destination: ${cursor}. Use its owning skill manager.`);
+        }
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      const parent = dirname(cursor);
+      if (parent === cursor) break;
+      cursor = parent;
+    }
+  }
+  // Copy-mode Skills CLI installs have no symlink. Respect its lock metadata
+  // for native agent destinations. Custom targets still receive the link guard.
+  const nativeTarget = resolve(options.agent[options.scope]());
+  if (options.target !== nativeTarget) return;
+  const lockPath = options.scope === "global"
+    ? join(homedir(), ".agents", ".skill-lock.json")
+    : join(process.cwd(), "skills-lock.json");
+  if (!existsSync(lockPath)) return;
+  const lock = JSON.parse(readFileSync(lockPath, "utf8"));
+  if (!lock.skills || typeof lock.skills !== "object") {
+    throw new Error(`Unrecognized skill manager lock: ${lockPath}. No files were written.`);
+  }
+  const managed = selectedSkills(options).filter(name => Object.hasOwn(lock.skills, name));
+  if (managed.length) {
+    throw new Error(`Skills CLI owns ${managed.join(", ")}. Use npx skills update. No files were written.`);
+  }
+}
+
 function installFiles(options) {
   const plan = installPlan(options);
+  assertLegacyOwnership(options, plan);
   const conflicts = plan.filter(x => existsSync(x.destination) && !fileEqual(x.source, x.destination));
   if (conflicts.length > 0 && !options.force) {
     throw new Error(`Changed installed file(s) already exist. No files were written. Use --force after review:\n${conflicts.map(x => `- ${x.destination}`).join("\n")}`);

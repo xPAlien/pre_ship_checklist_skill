@@ -6,9 +6,9 @@
     "pre-ship-checklist-skill": "./bin/pre-ship-checklist-skill.js"
   },
   "files": [
-    "*.skill",
-    "ship",
+    "skills",
     "bin",
+    "docs",
     "README.md",
     "CLAUDE.md",
     "CONTRIBUTING.md",
@@ -16,12 +16,24 @@
   ],
   "scripts": {
     "test": "node --test",
-    "test:ship": "python -m unittest discover -s ship/tests -v",
-    "pack:dry-run": "npm pack --dry-run"
+    "test:ship": "python -m unittest discover -s skills/ship/tests -v",
+    "pack:dry-run": "npm pack --dry-run",
+    "test:skills-cli": "node scripts/skills-cli-smoke.cjs",
+    "verify:package": "node scripts/check-package.cjs"
   },
   "keywords": [
-    "claude", "claude-code", "codex", "vercel", "production-readiness",
-    "openclaw", "hermes", "goose", "pi", "agent-skills", "security", "pre-ship"
+    "claude",
+    "claude-code",
+    "codex",
+    "vercel",
+    "production-readiness",
+    "openclaw",
+    "hermes",
+    "goose",
+    "pi",
+    "agent-skills",
+    "security",
+    "pre-ship"
   ],
   "author": "xPAlien",
   "license": "MIT",

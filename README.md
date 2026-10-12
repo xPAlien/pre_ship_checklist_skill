@@ -1,117 +1,106 @@
 # Pre-Ship Checklist Skill
 
-One production release workflow with two independent specialist audits. Built for Codex, Claude Code, and compatible AgentSkills agents. The `ship` skill provides an evidence-based release gate, not an automatic deployment.
+v0.4.0 | Standard Agent Skills layout
+
+One evidence-based release workflow with two independent specialist audits. Vercel Skills CLI is the preferred installation and update manager. No automatic deployment or production changes.
 
 ## Skills
 
-| Skill | Scope | Command |
+| Skill | Purpose | Invocation |
 | --- | --- | --- |
-| `ship` | Eight release gates spanning security, data, functional QA, accessibility, performance, SEO/privacy, hosting, and cutover | `$ship` in Codex or `/ship` in Claude Code |
-| `pre-launch-checklist` | 25 infrastructure and operations checks for applicable systems | `/pre-launch-checklist` in Claude Code |
-| `vibe-coder-security-checklist` | 36 authentication, API, database, and infrastructure security checks | `/vibe-coder-security-checklist` in Claude Code |
+| ship | Eight release gates and one consolidated report | `$ship` in Codex or `/ship` in Claude Code |
+| pre-launch-checklist | 25 infrastructure and operations checks | `/pre-launch-checklist` in Claude Code |
+| vibe-coder-security-checklist | 36 application security checks | `/vibe-coder-security-checklist` in Claude Code |
 
-`ship` is the recommended entry point. It optionally draws on the specialist checklists, deduplicates overlapping risks, and issues one report. Each specialist also works by itself. The 40 checklist items from the original Ship brief appear in `ship/references/source-mapping.md`. The 25 additional backend items appear in `ship/references/backend-controls.md`. These are 65 source items with overlapping controls, not 65 independent security checks.
+The original 40 source items and 25 backend additions remain intact. These are 65 source items with overlapping controls, not 65 independent security tests. The main workflow covers keys, cost abuse, payments, recovery, and launch operations. It supports optional read-only reviewers, requires scoped approval before fixes, and uses one writer.
 
-## v0.4.0 | Backend release review
+## Install with Vercel Skills CLI
 
-The update adds evidence requirements for secrets and access, cost abuse, payments and entitlements, recovery, and launch operations. Five optional read-only review groups feed one report. Without supported delegation, the same review runs sequentially. Findings precede approval. One writer applies approved fixes.
+Existing users: complete [the migration guide](docs/skills-cli-migration.md) before running installation. Installation and updates overwrite selected managed content. Preserve local edits first.
 
-Budgets and business policies need owner decisions. Dashboard work remains separate. No automatic account deletion, Git-history rewrite, live payment tests, or production changes. This update is a skill package, not an audit of your applications.
+Prerequisites: Git and Node.js 22.20.0 or newer, with npm. This repository pins Skills CLI 1.7.2 for its documented commands and integration tests. Node 24 is used in CI. Python is optional for running the Ship preflight helper, not for installation.
 
-## Installation
-
-The default installer installs all three skills globally into Claude Code folders using the documented `SKILL.md` convention.
+The same commands work in Windows PowerShell and macOS/Linux terminals. On Windows, use `npx.cmd` instead of `npx` when PowerShell blocks the npm PowerShell shim. Do not weaken the execution policy.
 
 ```sh
-npx pre-ship-checklist-skill install
+# Discover the three skills without installing
+npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --list
+
+# Install only this collection for Claude Code and Codex, globally
+npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --global --agent claude-code codex --skill ship pre-launch-checklist vibe-coder-security-checklist --copy
+
+# Inspect installed skills
+npx skills@1.7.2 list --global
+
+# Update only this collection, not unrelated skills
+npx skills@1.7.2 update ship pre-launch-checklist vibe-coder-security-checklist --global
 ```
 
-For Codex:
+These repository-wide commands target the default branch. For a pending PR, test its checkout or an explicitly reviewed branch source. Do not expect unmerged changes from the default branch.
 
-```sh
-npx pre-ship-checklist-skill install --agent codex
-```
+`--copy` avoids requiring symlink support. The CLI still owns the installed copies and update records. Omit `--copy` to use the upstream symlink workflow after testing it on your machine. Do not use two managers for the same skill destination.
 
-For both:
+For one project, run the installation command from its root without `--global`. Use `--project` on subsequent named updates. Commit the resulting `skills-lock.json` and the intended project installation files according to your project policy. A CLI version pin does not pin the skill repository revision. Review source changes before updates. See the migration guide for revision pinning and rollback.
 
-```sh
-npx pre-ship-checklist-skill install --agent claude
-npx pre-ship-checklist-skill install --agent codex
-```
-
-For a single project, add `--scope project`. Use `--only ship` to install only the main release skill. Use `--target <path>` for a custom skills directory and `--dry-run` to see the file plan.
-
-```sh
-npx pre-ship-checklist-skill install --agent codex --scope project --dry-run
-npx pre-ship-checklist-skill doctor --agent codex
-npx pre-ship-checklist-skill list
-npx pre-ship-checklist-skill targets
-```
-
-### Supported targets
-
-| Agent | Global destination | Project destination |
-| --- | --- | --- |
-| Claude Code | `~/.claude/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` |
-| Codex | `~/.agents/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
-| OpenClaw | `~/.openclaw/skills/<name>/SKILL.md` | `skills/<name>/SKILL.md` |
-| Hermes | `~/.hermes/skills/<name>/SKILL.md` | `.hermes/skills/<name>/SKILL.md` |
-| Pi | `~/.pi/agent/skills/<name>/SKILL.md` | `.pi/skills/<name>/SKILL.md` |
-| AgentSkills | `~/.agents/skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` |
-| Goose | managed `.goosehints` block | managed `.goosehints` block |
-
-The `ship` folder retains its `references/`, `scripts/`, `templates/`, and `tests/` subfolders on installation. Goose installs only a summary because Goose follows a different hints convention.
-
-### Safe upgrade from v0.2.x
-
-The v0.2.x Claude installer placed two flat `.skill` files in `~/.claude/skills`. The new installer writes folder-based `SKILL.md` packages. It does not delete or overwrite old flat files. After validating v0.4.0 with `doctor`, inspect and remove obsolete flat copies manually if they are still active. If a managed file differs, installation stops before any file is written. `--force` overwrites managed files only after you review the conflicts.
-
-To pin a project version, add the package as a development dependency and run its installer from npm scripts. Direct GitHub installation also works:
-
-```sh
-npm install --save-dev pre-ship-checklist-skill@0.4.0
-npx pre-ship-checklist-skill install --agent codex --scope project
-```
-
-A public npm release for v0.4.0 is a separate publishing step. Until publication is verified, use the approved GitHub revision or a local checkout. Do not assume npm serves v0.4.0.
-
-## Run the release audit
+## Source layout
 
 ```text
-$ship Audit this repository for production. Do a read-only review first, identify the exact release revision, evaluate all applicable gates, collect evidence and return a GO, CONDITIONAL GO, or NO-GO result. Do not merge, deploy, rotate credentials, change production data, or alter deployment protection.
+skills/
+  ship/
+    SKILL.md
+    references/
+    scripts/
+    templates/
+    tests/
+  pre-launch-checklist/
+    SKILL.md
+  vibe-coder-security-checklist/
+    SKILL.md
 ```
 
-In Claude Code, use `/ship` in place of `$ship`.
+Each skill has one authoritative source. The audit instructions and supporting files are preserved by this layout migration. No duplicate root `.skill` files or root `ship/` folder remain.
 
-The skill returns `PASS`, `FAIL`, `NEEDS VERIFICATION`, or `NOT APPLICABLE` on applicable controls and prioritizes P0 through P3 findings. Unverified critical controls block a release. A GO verdict does not authorize production changes.
+Source mappings: [original 40 items](skills/ship/references/source-mapping.md), [25 backend items](skills/ship/references/backend-controls.md), [review protocol](skills/ship/references/backend-review.md).
 
-The offline scanner is a hint generator, not a comprehensive security test:
+## Compatibility installer
+
+The existing npm installer remains supported for established workflows. It now reads the same `skills/` folders. It does not invoke Skills CLI, install Node, or manage Skills CLI updates. Its legacy agent identifiers and Goose hints behavior remain unchanged.
+
+From a reviewed checkout:
 
 ```sh
-python ship/scripts/preflight.py --root /path/to/project
-python -m unittest discover -s ship/tests -v
+node bin/pre-ship-checklist-skill.js install --agent codex --dry-run
+node bin/pre-ship-checklist-skill.js doctor --agent codex
 ```
 
-## Maintainer checks
+It refuses symlink-managed destinations and recognized Skills CLI ownership records even with `--force`. Custom targets require explicit ownership review. For normal unmanaged destinations, differing files still stop installation before writes. Unrelated files remain untouched.
+
+No npm publication is required for Skills CLI to install from this repository. The package version remains 0.4.0 for this distribution-only refactor. Publishing the npm package remains a separate approval.
+
+## Run the audit
+
+Invoke `$ship` in Codex or `/ship` in Claude Code and request a read-only production-readiness review. The report uses `PASS`, `FAIL`, `NEEDS VERIFICATION`, and `NOT APPLICABLE`, with `GO`, `CONDITIONAL GO`, or `NO-GO`. A passing report does not authorize a merge, deployment, credential rotation, or production-data change.
+
+## Maintainer verification
 
 ```sh
 npm test
 npm run test:ship
-npm run pack:dry-run
-node bin/pre-ship-checklist-skill.js install --agent codex --dry-run
+npm run verify:package
 ```
 
-The CI workflow runs Node tests, the Python preflight tests, and an npm package dry run. The installer preserves non-managed files and does not perform deployments.
+CI runs these checks on Windows, macOS, and Linux. A separate step installs the pinned upstream Skills CLI into a temporary tooling directory and runs `npm run test:skills-cli`. The integration script isolates HOME, user profile, agent directories, Git configuration, and update fixtures. It verifies discovery, supporting files, both installation scopes, and targeted updates through the real CLI.
 
-## Maintenance and limits
+The integration tests validate distribution behavior. They do not launch Codex or Claude Code, audit a production application, publish a package, or modify your installed copies.
 
-- The older 25-point and 36-point audits remain independent and keep their original names and scopes. Their applicability and default severities must be evaluated against the inspected project.
-- The new Ship checklist is the authority for one consolidated release verdict, avoiding duplicate findings.
-- No agent report substitutes for branch protection, required CI checks, provider deployment permissions, or a named release approver.
-- Production deployment, migration, secret rotation, domain promotion, and disabling access protections each require explicit authorization.
+See [maintainer guidance](CLAUDE.md) and [contribution guidance](CONTRIBUTING.md).
 
-See [ship/README.md](ship/README.md) for the complete Ship package, [CLAUDE.md](CLAUDE.md) for maintainer conventions, and [CONTRIBUTING.md](CONTRIBUTING.md) for PR guidance.
+## Primary documentation
+
+- [Vercel Skills CLI](https://github.com/vercel-labs/skills)
+- [CLI documentation](https://skills.sh/docs/cli)
+- [Agent Skills specification](https://agentskills.io/specification)
 
 ## License
 
-MIT.
+MIT. See [LICENSE](LICENSE).

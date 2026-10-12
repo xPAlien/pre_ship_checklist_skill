@@ -10,14 +10,28 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    name: verify (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      DO_NOT_TRACK: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -25,9 +39,13 @@ jobs:
           python-version: '3.12'
       - name: Install package dependencies
         run: npm ci --ignore-scripts
-      - name: Test installer
+      - name: Test installer and contracts
         run: npm test
       - name: Test preflight helper
-        run: python -m unittest discover -s ship/tests -v
+        run: npm run test:ship
       - name: Validate packaged files
-        run: npm pack --dry-run
+        run: npm run verify:package
+      - name: Install pinned Skills CLI into temporary tooling
+        run: npm install --prefix "$RUNNER_TEMP/pre-ship-skills-cli" --ignore-scripts --no-audit --no-fund --save-exact skills@1.7.2
+      - name: Test real Skills CLI installation and update lifecycle
+        run: npm run test:skills-cli

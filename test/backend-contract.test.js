@@ -5,10 +5,10 @@ const test = require('node:test')
 
 const root = join(__dirname, '..')
 const read = path => readFileSync(join(root, path), 'utf8')
-const controls = read('ship/references/backend-controls.md')
-const protocol = read('ship/references/backend-review.md')
-const skill = read('ship/SKILL.md')
-const report = read('ship/templates/ship-report.md')
+const controls = read('skills/ship/references/backend-controls.md')
+const protocol = read('skills/ship/references/backend-review.md')
+const skill = read('skills/ship/SKILL.md')
+const report = read('skills/ship/templates/ship-report.md')
 
 // These tests check the distributed review contract, not application security.
 function controlRows(text) {
@@ -42,7 +42,7 @@ test('inventory validation rejects dropped, duplicate, and empty requirements', 
 })
 
 test('all backend mappings point to existing gate checks', () => {
-  const ids = new Set([...read('ship/references/checklist.md').matchAll(/^\| (G[0-7]-\d{2}) \|/gm)].map(m => m[1]))
+  const ids = new Set([...read('skills/ship/references/checklist.md').matchAll(/^\| (G[0-7]-\d{2}) \|/gm)].map(m => m[1]))
   for (const [id, , targets] of controlRows(controls)) {
     const refs = targets.split(', ')
     assert.ok(refs.length > 0, id)
@@ -106,7 +106,7 @@ test('payment and operations evidence includes failure cases and qualifications'
 })
 
 test('original source mapping and report requirements remain present', () => {
-  const original = read('ship/references/source-mapping.md')
+  const original = read('skills/ship/references/source-mapping.md')
   assert.equal([...original.matchAll(/^\| \d+ \|/gm)].length, 40)
   assert.match(controls, /65 items, not 65 unique security controls/)
   for (const required of ['BE-01 through BE-25', 'Owner actions and business decisions', 'Fixture provenance', 'Separate approval', 'Production changes performed', 'NEEDS VERIFICATION']) {
@@ -121,6 +121,6 @@ test('package, lockfile, skill and versioned documentation agree', () => {
   assert.equal(lock.packages[''].version, pkg.version)
   assert.ok(skill.includes(`version: "${pkg.version}"`))
   assert.ok(read('README.md').includes(`v${pkg.version}`))
-  assert.ok(read('ship/README.md').includes(`Version ${pkg.version}`))
+  assert.ok(read('skills/ship/README.md').includes(`Version ${pkg.version}`))
   assert.ok(controls.includes(`v${pkg.version}`))
 })

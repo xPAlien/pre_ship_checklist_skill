@@ -2,7 +2,7 @@
 
 A reusable, evidence-based release readiness workflow for Codex and Claude Code. Also supported by compatible AgentSkills agents. It reviews websites, apps, APIs, Vercel projects, and AI services. The default action is an audit, not a deployment.
 
-Version 0.3.0 | Integrated 2026-10-09
+Version 0.4.0 | Backend review update 2026-10-12
 
 ## Package
 
@@ -12,6 +12,8 @@ ship/
   README.md
   references/
     checklist.md
+    backend-controls.md
+    backend-review.md
     ci-policy.md
     official-sources.md
     source-mapping.md
@@ -74,6 +76,10 @@ python -m unittest discover -s .\tests -v
 - `NO-GO` blocks release for any critical failure or unresolved critical verification.
 - The release operator needs explicit authorization for the exact revision, production environment, and domain.
 - This skill does not technically prevent deployment. Enforce required checks and approvals through Git provider branch policies and the deployment provider.
+
+## Backend release review
+
+The 25 backend source items supplement the original 40. See `references/backend-controls.md` for coverage and primary sources. See `references/backend-review.md` for read-only review, approval, one-writer fixes, and owner actions. The review works sequentially or through supported read-only delegation. It does not require a specific model.
 
 ## Notes
 

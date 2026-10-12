@@ -86,6 +86,43 @@
 - First-hour checks and responsible person:
 - Recovery verification and domain auto-assignment status:
 
-## 9. Final approval
+## 9. Backend review record
+
+- Execution mode: `SEQUENTIAL` or `DELEGATED`
+- Reviewers who ran, assigned scope, and enforced tool restrictions:
+- Source coverage: original 40 plus 25 backend items, with overlapping findings deduplicated
+- Unrun groups and access restrictions:
+
+### Backend coverage ledger
+
+Include one row per BE-01 through BE-25. Link overlapping controls to the same finding without skipping applicability decisions.
+
+| Control | Applicable? | Status | Severity | Evidence location and time | Revision/environment | Finding ID or N/A reason |
+| --- | --- | --- | --- | --- | --- | --- |
+| `<BE-ID>` | `<yes/no/unknown>` | `<PASS/FAIL/NEEDS VERIFICATION/NOT APPLICABLE>` | `<P0-P3>` | `<sanitized reference>` | `<exact scope>` | `<finding or reason>` |
+
+### Owner actions and business decisions
+
+| Control | Provider/account/environment | Current evidence | Missing decision or proposed setting | Approval and operator | Steps and verification | Rollback or containment |
+| --- | --- | --- | --- | --- | --- | --- |
+| `<BE-ID>` | `<non-secret identifiers>` | `<verified or unknown>` | `<budget, quota, grace period, retention, MFA, renewal, or other setting>` | `<pending/named approval>` | `<documented steps>` | `<plan>` |
+
+### Cleanup proposals, not deletion approval
+
+| Exact record ID | Environment | Fixture provenance | Retention/dependency impact | Proposed action | Separate approval |
+| --- | --- | --- | --- | --- | --- |
+| `<ID>` | `<target>` | `<verified source or unknown>` | `<impact>` | `<retain/review/remove>` | `<pending>` |
+
+Keep sensitive evidence in an approved private location. Do not include secret values, customer records, full signed URLs, or recovery codes in this report.
+
+### Fix and retest summary
+
+- Approved change scope and one designated writer:
+- Files changed and resulting revision:
+- Regression tests executed and observed outcomes:
+- Checks not run and remaining owner actions:
+- Production changes performed: `NONE` unless separately authorized and verified
+
+## 10. Final approval
 
 Release remains unauthorized until a person approves a specific production action for the exact target and revision. A GO verdict is technical readiness, not an instruction to publish.

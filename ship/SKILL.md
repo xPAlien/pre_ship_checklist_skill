@@ -2,7 +2,7 @@
 name: ship
 description: Review production release readiness for a website, SaaS app, API, AI service, or Vercel project. Use for launch checklists, pre-deployment audits, shipping decisions, go-live reviews, production QA, and release approval. Inspect the repository and available runtime evidence, classify risk, and issue an evidence-based GO or NO-GO report. Audit first. Never deploy or change production without explicit authorization.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # Ship | Production Release Gate
@@ -47,6 +47,14 @@ This skill is the single release entry point. It includes a complete evidence-ba
 - The legacy skills' interactive yes/no format is not proof of validation. Prefer repository inspection, direct negative tests, runtime evidence, and provider records. A verbal confirmation alone is `NEEDS VERIFICATION` when a critical control needs evidence.
 - Run or recommend only tests relevant to the discovered stack, risk, and release scope. Do not ask for details visible in the repository or connected provider.
 - If invoked in `audit` mode, do not run automatic fixes, merge, or deploy. If invoked in `fix` mode, changes remain scoped and reviewable.
+
+### Backend review supplement
+
+Read `references/backend-controls.md` and `references/backend-review.md` on every audit. Evaluate all 25 BE controls for applicability alongside the existing gates. The original 40 source items remain covered. Reuse findings and evidence without losing control-level coverage.
+
+Use up to five read-only review groups only when delegation and tool restrictions support them. Otherwise review sequentially. Keys and payments need deeper negative-path verification, not a hardcoded model or effort setting. Return findings before fixes and stop for explicit scoped approval. Use one writer after approval.
+
+Never rewrite Git history or automatically delete accounts. Keep production data unchanged. Use payment sandbox tests only. Report secret locations, never values. Unknown budgets, grace periods, retention, or critical provider settings remain owner decisions, not invented defaults. The supplement overrides conflicting remediation suggestions in legacy checklists.
 
 ## 4. Execute the eight gates in order
 
@@ -138,12 +146,15 @@ Always report:
 5. Executed commands, observed outcomes, unrun checks, and access limitations.
 6. Exact production approval still required, if relevant.
 7. Cutover runbook, first-hour monitoring, and rollback decision triggers.
+8. Backend control coverage, actual reviewer execution mode, exact-ID cleanup proposals, and separate owner-action and business-decision tables. Report dashboard settings as unverified when access is missing.
 
 No scores that hide blockers. No invented screenshots, passing tests, dependency results, legal compliance, provider configuration, or deployment success. An agent skill is advisory, not an enforced production boundary. Use protected branches, required CI checks, deployment permissions, and explicit approval gates to stop unauthorized releases.
 
 ## 10. Progressive references
 
 - `references/checklist.md`: full conditional release checklist and expected evidence.
+- `references/backend-controls.md`: 25 mapped backend source items with technical corrections and required evidence.
+- `references/backend-review.md`: five read-only review groups, approval checkpoint, one writer, and owner-action boundaries.
 - `references/vercel.md`: Vercel hosting, preview, promotion, rollback, monitoring, and cost controls.
 - `references/ci-policy.md`: how to enforce the release gate rather than relying on an agent verdict.
 - `references/source-mapping.md`: mapping from the user's 40 original checklist items to the release gates.

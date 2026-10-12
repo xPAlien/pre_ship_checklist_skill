@@ -20,6 +20,8 @@ async function run(args = [], cwd = rootDir) {
 const samples = {
   "ship/SKILL.md": /name: ship/,
   "ship/references/checklist.md": /G0/,
+  "ship/references/backend-controls.md": /BE-25/,
+  "ship/references/backend-review.md": /one designated writer/,
   "ship/scripts/preflight.py": /preflight|def main/,
   "pre-launch-checklist/SKILL.md": /Pre-Launch Production Checklist/,
   "vibe-coder-security-checklist/SKILL.md": /Vibe Coder Pre-Ship Security Checklist/
@@ -74,7 +76,7 @@ test("--only ship includes every reference and helper", async () => {
   try {
     const { stdout } = await run(["install", "--only", "ship", "--target", target]);
     assert.match(stdout, /Installed \d+ managed file/);
-    for (const path of ["SKILL.md", "README.md", "references/source-mapping.md", "references/vercel.md", "templates/ship-report.md", "tests/test_preflight.py"]) {
+    for (const path of ["SKILL.md", "README.md", "references/source-mapping.md", "references/vercel.md", "references/backend-controls.md", "references/backend-review.md", "templates/ship-report.md", "tests/test_preflight.py"]) {
       assert.equal(existsSync(join(target, "ship", path)), true, path);
     }
     assert.equal(existsSync(join(target, "pre-launch-checklist")), false);

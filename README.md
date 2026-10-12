@@ -10,7 +10,13 @@ One production release workflow with two independent specialist audits. Built fo
 | `pre-launch-checklist` | 25 infrastructure and operations checks for applicable systems | `/pre-launch-checklist` in Claude Code |
 | `vibe-coder-security-checklist` | 36 authentication, API, database, and infrastructure security checks | `/vibe-coder-security-checklist` in Claude Code |
 
-`ship` is the recommended entry point. It optionally draws on the specialist checklists, deduplicates overlapping risks, and issues one report. Each specialist also works by itself. The 40 checklist items from the original Ship brief appear in `ship/references/source-mapping.md`.
+`ship` is the recommended entry point. It optionally draws on the specialist checklists, deduplicates overlapping risks, and issues one report. Each specialist also works by itself. The 40 checklist items from the original Ship brief appear in `ship/references/source-mapping.md`. The 25 additional backend items appear in `ship/references/backend-controls.md`. These are 65 source items with overlapping controls, not 65 independent security checks.
+
+## v0.4.0 | Backend release review
+
+The update adds evidence requirements for secrets and access, cost abuse, payments and entitlements, recovery, and launch operations. Five optional read-only review groups feed one report. Without supported delegation, the same review runs sequentially. Findings precede approval. One writer applies approved fixes.
+
+Budgets and business policies need owner decisions. Dashboard work remains separate. No automatic account deletion, Git-history rewrite, live payment tests, or production changes. This update is a skill package, not an audit of your applications.
 
 ## Installation
 
@@ -58,16 +64,16 @@ The `ship` folder retains its `references/`, `scripts/`, `templates/`, and `test
 
 ### Safe upgrade from v0.2.x
 
-The v0.2.x Claude installer placed two flat `.skill` files in `~/.claude/skills`. The new installer writes folder-based `SKILL.md` packages. It does not delete or overwrite old flat files. After validating v0.3.0 with `doctor`, inspect and remove obsolete flat copies manually if they are still active. If a managed file differs, installation stops before any file is written. `--force` overwrites managed files only after you review the conflicts.
+The v0.2.x Claude installer placed two flat `.skill` files in `~/.claude/skills`. The new installer writes folder-based `SKILL.md` packages. It does not delete or overwrite old flat files. After validating v0.4.0 with `doctor`, inspect and remove obsolete flat copies manually if they are still active. If a managed file differs, installation stops before any file is written. `--force` overwrites managed files only after you review the conflicts.
 
 To pin a project version, add the package as a development dependency and run its installer from npm scripts. Direct GitHub installation also works:
 
 ```sh
-npm install --save-dev pre-ship-checklist-skill@0.3.0
+npm install --save-dev pre-ship-checklist-skill@0.4.0
 npx pre-ship-checklist-skill install --agent codex --scope project
 ```
 
-A public npm release for v0.3.0 is a separate publishing step. Until a release exists, use a GitHub package source or a local checkout rather than assuming npm already serves v0.3.0.
+A public npm release for v0.4.0 is a separate publishing step. Until publication is verified, use the approved GitHub revision or a local checkout. Do not assume npm serves v0.4.0.
 
 ## Run the release audit
 

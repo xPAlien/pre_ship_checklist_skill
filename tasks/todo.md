@@ -60,3 +60,14 @@
 - PASS: `npm audit --omit=dev` found 0 vulnerabilities.
 - PASS: local npx dry-run works for `--agent openclaw`.
 - PASS: local npx dry-run works for `--agent goose`.
+
+## npm Publishing Lockdown
+
+Do this after the first release published through `.github/workflows/release.yml`.
+
+- [ ] Confirm the first tagged release published through the Release workflow, paused for `npm-publish` approval, and shows a provenance badge on npmjs.com.
+- [ ] On https://www.npmjs.com/package/pre-ship-checklist-skill/access, require trusted publishing and disallow tokens.
+- [ ] Revoke any npm automation or publish tokens no longer needed.
+- [ ] Confirm `npm publish` from a workstation now fails, so only the approved workflow publishes.
+
+Context: 0.6.0 was published from a workstation before the workflow existed. Its files match commit `a5971ac` apart from CRLF line endings in the two LICENSE files.

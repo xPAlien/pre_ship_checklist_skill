@@ -147,6 +147,26 @@ CI runs these checks on Windows, macOS, and Linux, plus a Python 3.10 job for th
 
 The integration tests validate distribution behavior. They do not launch Codex or Claude Code, audit a production application, publish a package, or modify your installed copies.
 
+## Releasing to npm
+
+Publishing uses npm trusted publishing from GitHub Actions. No npm token is stored in the repository or in CI.
+
+One-time setup:
+
+1. On npmjs.com, open the `pre-ship-checklist-skill` package settings, add a trusted publisher for GitHub Actions with owner `xPAlien`, repository `pre_ship_checklist_skill`, workflow `release.yml`, and environment `npm-publish`.
+2. In this repository, create the `npm-publish` environment under Settings, Environments, add yourself as a required reviewer, and limit deployment tags to `v*.*.*`.
+3. Optional after the first successful publish: in the npm package settings, require trusted publishing and disallow tokens.
+
+Each release, after the version bump is merged to `master`:
+
+```sh
+git checkout master && git pull
+git tag v$(node -p "require('./package.json').version")
+git push origin --tags
+```
+
+The `Release` workflow checks that the tag matches `package.json`, points at `master`, and is not already published. It then runs the full test suite, the secret floor, and the package check, waits for your approval, and publishes with a provenance record.
+
 See [maintainer guidance](CLAUDE.md) and [contribution guidance](CONTRIBUTING.md).
 
 ## Primary documentation

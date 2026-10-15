@@ -19,7 +19,7 @@ The specialist audits retain 25, 36, and 45 numbered checks. Preserve numbering 
 5. Confirm both `--agent codex` and `--agent claude` still install all managed files into skill folders, and confirm `--dry-run` leaves the destination unchanged.
 6. Include the release impact, version decision, tests, and any migration notes in the PR description.
 
-Never merge, publish npm, or deploy another project without separate authorization.
+Never merge, publish npm, or deploy another project without separate authorization. npm releases go through `.github/workflows/release.yml` and the `npm-publish` environment approval. Do not publish from a workstation token.
 
 ## Severity and applicability
 

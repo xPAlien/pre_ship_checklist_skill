@@ -1,0 +1,76 @@
+name: Release
+
+# Publishes to npm with trusted publishing (OIDC). No npm token is stored anywhere.
+# Trigger: push a tag vX.Y.Z that matches package.json and points at a commit on master.
+# The npm-publish environment should require the repository owner's approval.
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DO_NOT_TRACK: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Check tag, version, and branch
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$version" ]; then
+            echo "Tag $TAG does not match package.json $version." >&2
+            exit 1
+          fi
+          git fetch --no-tags origin master
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "Tag $TAG points at a commit that is not on master." >&2
+            exit 1
+          fi
+          if npm view "pre-ship-checklist-skill@${version#v}" version >/dev/null 2>&1; then
+            echo "pre-ship-checklist-skill@${version#v} is already published." >&2
+            exit 1
+          fi
+      - name: Install package dependencies
+        run: npm ci --ignore-scripts
+      - name: Test installer, hooks and contracts
+        run: npm test
+      - name: Test preflight and report helpers
+        run: python -m unittest discover -s test/python -v
+      - name: Repository secret floor
+        run: python skills/ship/scripts/preflight.py --root . --fail-on secret --format text
+      - name: Validate packaged files
+        run: npm run verify:package
+      - name: Install npm with trusted publishing support
+        run: npm install --global --ignore-scripts npm@11.21.0
+      - name: Publish with provenance
+        run: npm publish --ignore-scripts

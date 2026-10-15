@@ -1,8 +1,8 @@
 ---
 name: ship
-description: Review production release readiness for a website, SaaS app, API, AI service, or Vercel project. Use for launch checklists, pre-deployment audits, shipping decisions, go-live reviews, production QA, and release approval. Inspect the repository and available runtime evidence, classify risk, and issue an evidence-based GO or NO-GO report. Audit first. Never deploy or change production without explicit authorization.
+description: Review production release readiness for a website, SaaS app, API, AI service, or Vercel project. Use for launch checklists, pre-deployment audits, "ready to deploy" or "ship it" requests, go-live reviews, production QA, and release approval. This is the entry point for release readiness. It coordinates the pre-launch and security specialist checklists. Inspect the repository and available runtime evidence, classify risk, and issue an evidence-based GO or NO-GO report. Audit first. Never deploy or change production without explicit authorization.
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # Ship | Production Release Gate
@@ -42,7 +42,7 @@ Do not assume that a public marketing site and a private API require the same SE
 This skill is the single release entry point. It includes a complete evidence-based checklist and does not depend on the presence of another skill to evaluate critical controls.
 
 - If installed, read `../pre-launch-checklist/SKILL.md` for a supplementary infrastructure review and `../vibe-coder-security-checklist/SKILL.md` for a supplementary security review. Their checklists remain independent, but their findings belong in the same Ship report.
-- Evaluate a given control once, even if several checklists describe the same risk. Keep references to contributing checklist item IDs as supporting provenance.
+- Evaluate a given control once, even if several checklists describe the same risk. Keep references to contributing checklist item IDs as supporting provenance. Cite specialist items as `PL-NN` (pre-launch item NN) and `SEC-NN` (security item NN), for example `PL-07` or `SEC-27`.
 - Apply the Ship severity and release-decision policy when specialist checklists use different blocker or warning defaults. Inspect the actual project and classify applicability before assigning severity.
 - The legacy skills' interactive yes/no format is not proof of validation. Prefer repository inspection, direct negative tests, runtime evidence, and provider records. A verbal confirmation alone is `NEEDS VERIFICATION` when a critical control needs evidence.
 - Run or recommend only tests relevant to the discovered stack, risk, and release scope. Do not ask for details visible in the repository or connected provider.
@@ -50,7 +50,7 @@ This skill is the single release entry point. It includes a complete evidence-ba
 
 ### Backend review supplement
 
-Read `references/backend-controls.md` and `references/backend-review.md` on every audit. Evaluate all 25 BE controls for applicability alongside the existing gates. The original 40 source items remain covered. Reuse findings and evidence without losing control-level coverage.
+Read `references/backend-controls.md` and `references/backend-review.md` whenever the release unit has server code, persisted data, authentication, uploads, payments, metered APIs, scheduled jobs, or provider accounts. Evaluate all 25 BE controls for applicability alongside the existing gates. For a purely static site with none of these, skip loading both files and record each BE control as `NOT APPLICABLE` with the one shared reason "static release unit without backend, data, or paid APIs". The original 40 source items remain covered. Reuse findings and evidence without losing control-level coverage.
 
 Use up to five read-only review groups only when delegation and tool restrictions support them. Otherwise review sequentially. Keys and payments need deeper negative-path verification, not a hardcoded model or effort setting. Return findings before fixes and stop for explicit scoped approval. Use one writer after approval.
 
@@ -76,7 +76,7 @@ Critical gates always include G0 and G1. G2 is critical when the product has per
 ## 5. Collect evidence safely
 
 1. Review repo state, configuration, migrations, CI definitions, and deployment configuration. Identify the exact candidate SHA.
-2. If local Python is available, run `python scripts/preflight.py --root <repo-path>`. The output supplies hints only. It is not a security audit or GO decision.
+2. If local Python is available, run `python "${CLAUDE_SKILL_DIR}/scripts/preflight.py" --root <repo-path>`. `${CLAUDE_SKILL_DIR}` is this skill's folder in Claude Code. In other agents, resolve `scripts/preflight.py` relative to this SKILL.md file, never relative to the project. The output supplies hints, line numbers, and pattern names only. It never prints credential values. It is not a security audit or GO decision.
 3. Run existing project-specific lint, typecheck, unit, integration, build, dependency, and secret scanning commands as applicable. Use the lockfile and project scripts. Never run unknown project scripts before inspection.
 4. Run browser tests against a safe local or protected staging build. Test with keyboard and touch interaction. Include error paths, not only successful paths.
 5. Check authentication and authorization at API, data, and resource boundaries. Verify tenant isolation and deny-by-default behavior wherever applicable.
@@ -130,12 +130,31 @@ For Vercel targets, read `references/vercel.md`. Verify:
 - The exact staged or preview candidate is healthy. Preview promotion might create a fresh production build with production environment variables.
 - Domains, certificate, redirects, functions, storage regions, caching, logging, monitoring, and spend controls are reviewed.
 - The rollback operator, prior healthy revision, database compatibility, and smoke test are documented.
+- Cron routes reject requests without the `CRON_SECRET` bearer header (G6-12).
+- Risky releases use a Rolling Release with an abort trigger, and Next.js apps use Skew Protection where available (G7-10).
+- Automated tests reach protected previews through Protection Bypass for Automation, never by removing protection (G7-11).
+- When the Vercel MCP server is connected, collect provider evidence with its read-only tools in `audit` mode. `references/vercel.md` lists allowed and forbidden tools.
 
 Vercel's deployment rollback does not reverse database migrations or external side effects. Document a separate data recovery strategy.
 
 ## 9. Deliverables and output format
 
 Use `templates/ship-report.md`. Produce the report as GitHub Flavored Markdown in the repo's chosen release-record location only when authorized to write it. Otherwise return it in chat.
+
+### Report artifact option
+
+Offer this once per audit. Write nothing until the user agrees. Read `references/report-artifact.md` before using it.
+
+1. Record the decision as `.ship/report.json` following `templates/ship-report.schema.json`. Start from `python "${CLAUDE_SKILL_DIR}/scripts/report.py" skeleton --root <repo-path>`.
+2. Run `report.py validate .ship/report.json --root <repo-path>`. It enforces the schema, the release policy in section 6, and a secret-content check. Fix the record, never the policy, when validation fails.
+3. Render with `report.py render .ship/report.json --format md` or `--format html`. Rendering refuses an invalid report.
+4. If the harness publishes private pages, such as Claude artifacts, offer to publish the HTML view privately. Never publish to a public URL. Confirm redaction first: no secret values, customer data, bypass tokens, or private topology a reader outside the release team should not see.
+
+The same JSON file feeds the optional hooks in `references/hooks.md` and any CI check. A report is never approval to deploy.
+
+### Hook option
+
+When the user wants release guardrails in a project, offer the optional hooks in `references/hooks.md`: a deploy guard, post-deploy smoke checks, and a Git pre-push secret floor. Installing them writes project files, so it needs the user's consent and never happens during an `audit`. Hooks are local guardrails. Recommend the CI checks in `references/ci-policy.md` as the enforced boundary.
 
 Always report:
 
@@ -160,5 +179,10 @@ No scores that hide blockers. No invented screenshots, passing tests, dependency
 - `references/source-mapping.md`: mapping from the user's 40 original checklist items to the release gates.
 - `references/official-sources.md`: primary documentation and how to verify evolving guidance.
 - `templates/ship-report.md`: repeatable release decision record.
-- `scripts/preflight.py`: offline, read-only repo inspection with no claim of production readiness.
+- `references/report-artifact.md`: JSON report contract, validation, rendering, and private publishing rules.
+- `references/hooks.md`: optional Claude Code deploy guard, post-deploy smoke checks, and Git pre-push secret floor.
+- `templates/ship-report.schema.json` and `templates/ship-report.example.json`: machine-readable report contract and a worked example.
+- `scripts/preflight.py`: offline, read-only repo inspection with no claim of production readiness. `--fail-on secret` and `--format text` support hooks and CI.
+- `scripts/report.py`: offline report skeleton, validation, and Markdown or HTML rendering.
+- `hooks/`: hook scripts installed into a project by `pre-ship-checklist-skill install-hooks`.
 - `../pre-launch-checklist/SKILL.md` and `../vibe-coder-security-checklist/SKILL.md`: optional independent specialist checklists installed by the unified installer.

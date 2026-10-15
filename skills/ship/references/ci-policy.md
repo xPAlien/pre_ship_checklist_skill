@@ -21,6 +21,24 @@ A skill produces a documented decision. It does not replace permission boundarie
 - Prefer environment-scoped secrets and controlled access to project settings.
 - Never publish the full Ship report if it includes private topology, vulnerability details, customer data, or protected deployment URLs. Redact or store privately.
 
+## Machine-checkable floor
+
+Two Ship outputs are safe to run in CI because they are offline and read-only:
+
+```yaml
+- name: Ship secret floor
+  run: python path/to/ship/scripts/preflight.py --root . --fail-on secret --format text
+- name: Ship report policy
+  if: hashFiles('.ship/report.json') != ''
+  run: python path/to/ship/scripts/report.py validate .ship/report.json --root .
+```
+
+- The secret floor blocks high-confidence credential patterns, service-role JWTs, client-exposed secret variable names, and tracked env files in tracked files. It is not a Git history scan. Pair it with a dedicated history scanner where the risk justifies one.
+- The report check proves the recorded verdict matches the release policy and the current commit. It does not prove the audit evidence is true. Keep a person's review and approval in the loop.
+- Make these required status checks on the production branch only after confirming they pass on the default branch.
+
+The optional local hooks in `hooks.md` give agents the same floor earlier. They do not replace these checks.
+
 ## Failing release policy
 
 - `P0` and `P1` fail the human release decision and must be integrated with mandatory checks where programmatic verification is available.

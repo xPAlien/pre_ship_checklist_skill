@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
+const { execFileSync } = require("node:child_process");
 const {
+  chmodSync,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -19,6 +21,19 @@ const SPECIALISTS = ["pre-launch-checklist", "vibe-coder-security-checklist"];
 const SKILLS = ["ship", ...SPECIALISTS];
 const GOOSE_START = "# pre-ship-checklist-skill:start";
 const GOOSE_END = "# pre-ship-checklist-skill:end";
+const GIT_HOOK_MARKER = "pre-ship-checklist-skill:managed";
+const HOOK_SOURCES = [
+  ["skills/ship/hooks/ship-hooks-lib.cjs", "ship-hooks-lib.cjs"],
+  ["skills/ship/hooks/deploy-guard.cjs", "deploy-guard.cjs"],
+  ["skills/ship/hooks/post-deploy.cjs", "post-deploy.cjs"],
+  ["skills/ship/hooks/git-pre-push.sh", "git-pre-push.sh"],
+  ["skills/ship/scripts/preflight.py", "preflight.py"]
+];
+const HOOK_MATCHER = "Bash|mcp__.*[Vv]ercel.*";
+const HOOK_COMMANDS = {
+  PreToolUse: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/ship/deploy-guard.cjs"',
+  PostToolUse: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/ship/post-deploy.cjs"'
+};
 
 const AGENTS = {
   claude: {
@@ -94,16 +109,26 @@ Usage:
   pre-ship-checklist-skill list
   pre-ship-checklist-skill targets
   pre-ship-checklist-skill doctor [options]
+  pre-ship-checklist-skill install-hooks [hook options]
 
 Options:
   --agent <name>   claude, codex, openclaw, hermes, pi, agents, goose
   --scope <scope>  global or project (default: global)
   --target <path>  Custom skills directory, or Goose hints file
-  --only <name>    ship, pre-launch-checklist, vibe-coder-security-checklist, all
+  --only <names>   ship, pre-launch-checklist, vibe-coder-security-checklist, all
+                   (comma-separated list accepted)
   --force          Overwrite only managed files that differ
   --dry-run        Preview all planned files without writing
   --help, -h       Show this help
   --version, -v    Print package version
+
+Hook options (project scope only, run from the project root):
+  --git            Also install the Git pre-push secret floor
+  --write-settings Merge the Claude Code hook entries into .claude/settings.json
+                   (default: print the entries for you to add)
+  --force          Overwrite only managed hook files that differ
+  --dry-run        Preview without writing
+Hooks are local guardrails, not CI enforcement.
 
 Defaults: --agent claude --scope global --only all
 All folder-based agents receive <skills>/<name>/SKILL.md.
@@ -120,7 +145,9 @@ function parseOptions(args) {
     target: null,
     only: "all",
     force: false,
-    dryRun: false
+    dryRun: false,
+    git: false,
+    writeSettings: false
   };
   for (let i = 1; i < args.length; i += 1) {
     const arg = args[i];
@@ -135,6 +162,10 @@ function parseOptions(args) {
       options.force = true;
     } else if (arg === "--dry-run") {
       options.dryRun = true;
+    } else if (arg === "--git" && options.command === "install-hooks") {
+      options.git = true;
+    } else if (arg === "--write-settings" && options.command === "install-hooks") {
+      options.writeSettings = true;
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -142,8 +173,10 @@ function parseOptions(args) {
   if (options.scope !== "global" && options.scope !== "project") {
     throw new Error("--scope must be global or project");
   }
-  if (options.only !== "all" && !SKILLS.includes(options.only)) {
-    throw new Error(`Unknown skill: ${options.only}`);
+  options.skills = options.only === "all" ? SKILLS : [...new Set(options.only.split(",").map(name => name.trim()).filter(Boolean))];
+  const unknown = options.skills.filter(name => !SKILLS.includes(name));
+  if (unknown.length || options.skills.length === 0) {
+    throw new Error(`Unknown skill: ${unknown.join(", ") || options.only}`);
   }
   options.agent = agentFor(options.agentName);
   options.target = options.target || targetFor(options.agentName, options.scope);
@@ -151,7 +184,7 @@ function parseOptions(args) {
 }
 
 function selectedSkills(options) {
-  return options.only === "all" ? SKILLS : [options.only];
+  return options.skills;
 }
 
 function walkFiles(path) {
@@ -296,6 +329,115 @@ function doctor(options) {
   return errors === 0 ? 0 : 1;
 }
 
+function hookPlan(projectRoot) {
+  const folder = join(projectRoot, ".claude", "hooks", "ship");
+  return HOOK_SOURCES.map(([source, name]) => ({ source: join(ROOT, source), destination: join(folder, name) }));
+}
+
+function gitHooksDir(projectRoot) {
+  try {
+    const path = execFileSync("git", ["-C", projectRoot, "rev-parse", "--git-path", "hooks"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return resolve(projectRoot, path);
+  } catch {
+    throw new Error(`--git needs a Git repository at ${projectRoot}. No files were written.`);
+  }
+}
+
+function hookEntries() {
+  const hooks = {};
+  for (const [event, command] of Object.entries(HOOK_COMMANDS)) {
+    hooks[event] = [{ matcher: HOOK_MATCHER, hooks: [{ type: "command", command, timeout: 30 }] }];
+  }
+  return { hooks };
+}
+
+function mergeSettings(settings) {
+  const next = JSON.parse(JSON.stringify(settings));
+  if (next.hooks !== undefined && (typeof next.hooks !== "object" || Array.isArray(next.hooks))) {
+    throw new Error("Existing settings.hooks is not an object. No files were written.");
+  }
+  next.hooks = next.hooks || {};
+  let added = 0;
+  for (const [event, command] of Object.entries(HOOK_COMMANDS)) {
+    const groups = next.hooks[event] = next.hooks[event] || [];
+    if (!Array.isArray(groups)) throw new Error(`Existing settings.hooks.${event} is not an array. No files were written.`);
+    const present = groups.some(group => Array.isArray(group && group.hooks) && group.hooks.some(hook => hook && hook.command === command));
+    if (!present) {
+      groups.push(hookEntries().hooks[event][0]);
+      added += 1;
+    }
+  }
+  return { next, added };
+}
+
+function installHooks(options) {
+  if (options.scope !== "project") throw new Error("install-hooks supports --scope project only. Run it from the project root.");
+  const projectRoot = process.cwd();
+  const plan = hookPlan(projectRoot);
+  // Validate every destination before writing anything.
+  const conflicts = plan.filter(x => existsSync(x.destination) && !fileEqual(x.source, x.destination));
+  let gitHook = null;
+  if (options.git) {
+    gitHook = join(gitHooksDir(projectRoot), "pre-push");
+    if (existsSync(gitHook)) {
+      const current = readFileSync(gitHook, "utf8");
+      if (!current.includes(GIT_HOOK_MARKER)) {
+        throw new Error(`An unmanaged Git pre-push hook exists: ${gitHook}. No files were written. Chain .claude/hooks/ship/git-pre-push.sh from it manually.`);
+      }
+      if (current !== readFileSync(join(ROOT, "skills/ship/hooks/git-pre-push.sh"), "utf8")) conflicts.push({ destination: gitHook });
+    }
+  }
+  if (conflicts.length && !options.force) {
+    throw new Error(`Changed managed hook file(s) already exist. No files were written. Use --force after review:\n${conflicts.map(x => `- ${x.destination}`).join("\n")}`);
+  }
+  const settingsPath = join(projectRoot, ".claude", "settings.json");
+  let merged = null;
+  if (options.writeSettings) {
+    let current = {};
+    if (existsSync(settingsPath)) {
+      try {
+        current = JSON.parse(readFileSync(settingsPath, "utf8"));
+      } catch (error) {
+        throw new Error(`Cannot parse ${settingsPath}: ${error.message}. No files were written.`);
+      }
+    }
+    merged = mergeSettings(current);
+  }
+  if (options.dryRun) {
+    console.log(`Would install ${plan.length} hook file(s) to ${join(projectRoot, ".claude", "hooks", "ship")}`);
+    for (const item of plan) console.log(`- ${item.destination}`);
+    if (gitHook) console.log(`Would install Git pre-push hook: ${gitHook}`);
+    if (merged) console.log(`Would add ${merged.added} hook entr${merged.added === 1 ? "y" : "ies"} to ${settingsPath}`);
+    return 0;
+  }
+  let copied = 0;
+  for (const item of plan) {
+    if (existsSync(item.destination) && fileEqual(item.source, item.destination)) continue;
+    mkdirSync(dirname(item.destination), { recursive: true });
+    copyFileSync(item.source, item.destination);
+    copied += 1;
+  }
+  if (gitHook) {
+    mkdirSync(dirname(gitHook), { recursive: true });
+    copyFileSync(join(ROOT, "skills/ship/hooks/git-pre-push.sh"), gitHook);
+    if (platform() !== "win32") chmodSync(gitHook, 0o755);
+  }
+  console.log(`Installed ${copied} hook file(s) to ${join(projectRoot, ".claude", "hooks", "ship")}. ${plan.length - copied} unchanged.`);
+  if (gitHook) console.log(`Installed Git pre-push secret floor: ${gitHook}`);
+  if (merged) {
+    if (merged.added > 0) {
+      mkdirSync(dirname(settingsPath), { recursive: true });
+      writeFileSync(settingsPath, `${JSON.stringify(merged.next, null, 2)}\n`, "utf8");
+    }
+    console.log(`Added ${merged.added} hook entr${merged.added === 1 ? "y" : "ies"} to ${settingsPath}.`);
+  } else {
+    console.log(`Add these entries to ${settingsPath} to activate the Claude Code hooks, or re-run with --write-settings:`);
+    console.log(JSON.stringify(hookEntries(), null, 2));
+  }
+  console.log("Hooks are local guardrails. Keep protected branches and required CI checks as the enforced release boundary.");
+  return 0;
+}
+
 function main(args) {
   if (args.length === 0 || ["--help", "-h", "help"].includes(args[0])) {
     printHelp();
@@ -316,8 +458,9 @@ function main(args) {
     SKILLS.forEach(name => console.log(name));
     return 0;
   }
-  if (!["install", "doctor"].includes(args[0])) throw new Error(`Unknown command: ${args[0]}`);
-  const options = parseOptions(args);
+  if (!["install", "doctor", "install-hooks"].includes(args[0])) throw new Error(`Unknown command: ${args[0]}`);
+  const options = parseOptions(args[0] === "install-hooks" && !args.includes("--scope") ? [...args, "--scope", "project"] : args);
+  if (options.command === "install-hooks") return installHooks(options);
   if (options.command === "doctor") return doctor(options);
   return options.agent.format === "goosehints" ? installGoose(options) : installFiles(options);
 }

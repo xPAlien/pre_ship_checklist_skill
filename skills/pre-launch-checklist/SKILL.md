@@ -1,6 +1,6 @@
 ---
 name: pre-launch-checklist
-description: "25-point production readiness checklist for web applications before going live. Use this skill whenever the user is about to launch, ship, deploy, or go live with a web application, API, or backend service. Triggers on: going live, about to launch, pre-launch, before I ship, production checklist, ready to deploy, pre-deploy review, is my app ready, launch checklist, save this before you go live, production readiness. Also trigger proactively when a user has just finished building something and is talking about deployment, even if they do not use these exact words."
+description: "Independent 25-item infrastructure and operations audit: load, sessions, uploads, database, async jobs, timeouts, observability, graceful shutdown, and runbooks. Use when the user explicitly asks for the pre-launch infrastructure checklist, a scalability or operations review, or names this skill. For an overall release readiness or GO/NO-GO decision, use the ship skill, which reads this checklist as a supplement."
 ---
 
 # Pre-Launch Production Checklist
@@ -21,7 +21,7 @@ Before running any checklist items, inspect repository and provider configuratio
 - **Queue/background jobs**: Any queue system, or inline/sync only?
 - **Auth**: NextAuth, Supabase Auth, Clerk, custom JWT, other?
 
-Use these answers to tailor every fix to the user's specific stack. For example: "Run migrations as a separate deploy step" means different things on Vercel (use a release command) versus Render (use a pre-deploy script) versus a raw VPS (run before restarting the service).
+Use these answers to tailor every fix to the user's specific stack. For example: "Run migrations as a separate deploy step" means different things on Vercel (no release phase exists, so run backward-compatible migrations from CI before the deployment that needs them, or from a guarded build step) versus Render (use a pre-deploy command) versus a raw VPS (run before restarting the service).
 
 ### Step 2 — Choose a mode
 
@@ -33,7 +33,7 @@ Blockers: items 1, 2, 3, 6, 9, 13, 14, 15, 19, 21, 25
 
 ### Step 3 — Run the checklist
 
-Present items one at a time. Show progress ("Item X of 25" or "Item X of 9" in fast mode). For each item, record PASS, FAIL, NEEDS VERIFICATION, or NOT APPLICABLE with evidence. Verbal assurance alone does not verify a critical control.
+Inspect the repository and available provider evidence for every selected item first. Then ask the user about all unresolved items in one batch, grouped by section. Show coverage ("X of 25 evaluated" or "X of 11 evaluated" in fast mode). For each item, record PASS, FAIL, NEEDS VERIFICATION, or NOT APPLICABLE with evidence. Verbal assurance alone does not verify a critical control.
 
 - Applicable failed baseline blockers require correction before release.
 - Warning due dates depend on real risk and an accountable owner, not a universal 30-day deadline.
@@ -109,7 +109,7 @@ Baseline blocker and warning labels are screening defaults, not universal archit
 
 14. **[BLOCKER] Rate limiting is configured**
     - Risk: 500 users. One of them is a bot. Your server is now a bot server.
-    - Fix: Add rate limiting at the edge (Cloudflare) or at the API layer (Upstash Redis).
+    - Fix: Add rate limiting at the edge (Vercel Firewall rate-limit rules, Cloudflare) or at the API layer (Upstash Redis or equivalent). Keep business-level quotas in the application.
 
 15. **[BLOCKER] All outbound HTTP calls have connection timeouts set**
     - Risk: External API hangs. Your thread hangs with it. Indefinitely.
@@ -169,7 +169,7 @@ After auditing, produce a report in this structure:
 BLOCKERS (must fix before launch):
 - [#] [item name]: [specific fix for their stack]
 
-WARNINGS (fix within 30 days):
+WARNINGS (owner and due date set by actual risk):
 - [#] [item name]: [specific fix for their stack]
 
 NOT APPLICABLE:

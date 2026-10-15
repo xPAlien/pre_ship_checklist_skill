@@ -1,4 +1,4 @@
-# Backend release controls | v0.4.0
+# Backend release controls | v0.5.0
 
 These 25 controls map the three supplied screenshots into the existing eight Ship gates. They supplement, rather than replace, the original 40 source items in [source-mapping.md](source-mapping.md). The combined source inventory is 65 items, not 65 unique security controls. Reuse evidence for overlapping risks and issue one finding per root cause.
 

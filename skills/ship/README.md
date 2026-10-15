@@ -1,6 +1,6 @@
 # Ship | Production Release Gate
 
-Version 0.4.0 | Standard distribution layout
+Version 0.5.0 | Standard distribution layout
 
 An evidence-based release readiness workflow for websites, apps, APIs, and AI services. The default action is a read-only audit, not a deployment. Vercel-specific checks apply only to Vercel-hosted release units.
 
@@ -18,12 +18,20 @@ ship/
     official-sources.md
     source-mapping.md
     vercel.md
+    hooks.md
+    report-artifact.md
   scripts/
     preflight.py
+    report.py
+  hooks/
+    deploy-guard.cjs
+    post-deploy.cjs
+    ship-hooks-lib.cjs
+    git-pre-push.sh
   templates/
     ship-report.md
-  tests/
-    test_preflight.py
+    ship-report.schema.json
+    ship-report.example.json
 ```
 
 The two specialist audits live in sibling folders named `pre-launch-checklist` and `vibe-coder-security-checklist`. The main Ship workflow remains useful without them.
@@ -54,10 +62,24 @@ From this installed skill folder:
 
 ```sh
 python scripts/preflight.py --root /path/to/project
-python -m unittest discover -s tests -v
+python scripts/preflight.py --root /path/to/project --fail-on secret --format text
 ```
 
-Use `python3` on systems where Python 3 has no `python` alias. The preflight helper provides structural hints. It does not prove application security or issue a release verdict. Python is not required to install the skill.
+Use `python3` on systems where Python 3 has no `python` alias. Python 3.10 or newer is required for the helpers, not for installation. The preflight helper provides structural hints with file paths and line numbers, never credential values. It flags common AI, payment, cloud, and source-control credentials, Supabase service-role JWTs, client-exposed secret variable names such as public-prefixed service-role keys, tracked env files, and Vercel cron handlers that skip `CRON_SECRET`. It does not prove application security or issue a release verdict.
+
+## Report artifact
+
+```sh
+python scripts/report.py skeleton --root /path/to/project > /path/to/project/.ship/report.json
+python scripts/report.py validate /path/to/project/.ship/report.json --root /path/to/project
+python scripts/report.py render /path/to/project/.ship/report.json --format html > report.html
+```
+
+The JSON record follows `templates/ship-report.schema.json`. Validation enforces the release policy: open P0 or P1 findings, critical unknowns, or failing critical gates force NO-GO. It also rejects secret-like values. Rendering refuses invalid reports. The HTML page is a private record with no external requests. See `references/report-artifact.md`.
+
+## Optional hooks
+
+`pre-ship-checklist-skill install-hooks` installs a Claude Code deploy guard, a post-deploy smoke check, and an optional Git pre-push secret floor into one project. The deploy guard denies production releases without a fresh passing report for HEAD and asks a person to confirm everything else. See `references/hooks.md`. Hooks are local guardrails, not CI enforcement.
 
 ## Backend release review
 
@@ -67,4 +89,4 @@ No automatic account deletion, Git-history rewrite, live payment tests, credenti
 
 ## Verification limits
 
-Distribution tests check discovery, installation, updates, package assets, and review-contract preservation. They do not run your production app or launch your coding agents. Verify agent discovery on your own machine after migration.
+Distribution tests check discovery, installation, updates, package assets, review-contract preservation, hook decisions, and report policy. They do not run your production app or launch your coding agents. Verify agent discovery on your own machine after migration.

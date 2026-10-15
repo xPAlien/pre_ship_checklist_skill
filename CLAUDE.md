@@ -6,11 +6,13 @@ This repository distributes three skill packages: the main `ship` release gate a
 
 - `skills/ship/SKILL.md`: one evidence-based production release workflow and its GO/NO-GO decision policy.
 - `skills/ship/references/`: conditional gate criteria, Vercel-specific guidance, source mapping, and CI policy.
-- `skills/ship/scripts/preflight.py`: offline, read-only structural hints, not a GO/NO-GO engine.
+- `skills/ship/scripts/preflight.py`: offline, read-only structural hints and the secret floor, not a GO/NO-GO engine.
+- `skills/ship/scripts/report.py` and `skills/ship/templates/ship-report.schema.json`: report contract, release-policy validation, and Markdown or HTML rendering.
+- `skills/ship/hooks/`: opt-in local guardrails installed by `install-hooks`. They are not CI enforcement.
 - `skills/pre-launch-checklist/SKILL.md`: independent 25-item infrastructure audit.
 - `skills/vibe-coder-security-checklist/SKILL.md`: independent 36-item security audit.
 - `bin/pre-ship-checklist-skill.js`: installer and self-checker for supported agents.
-- `test/cli.test.js` and `skills/ship/tests/`: regression tests.
+- `test/*.test.js` and `test/python/`: regression tests. Keep tests out of `skills/` so they are not installed into user skill folders.
 
 ## Standards
 
@@ -22,12 +24,14 @@ This repository distributes three skill packages: the main `ship` release gate a
 6. Every checklist change needs corresponding documentation or regression tests. New checklist items should have stable IDs or a clear ordinal mapping.
 7. Keep `package.json` version, root README, and `skills/ship/SKILL.md` metadata aligned on release changes.
 8. Check installer `--agent codex`, `--agent claude`, `--scope project`, idempotency, changed-file collisions, and packaged references in tests.
+9. Hooks and `install-hooks` never write outside the project, never edit `.claude/settings.json` without `--write-settings`, and never replace an unmanaged Git hook. A hook may deny or ask, never auto-approve a release.
+10. Keep credential-shaped test fixtures assembled at runtime. The repository self-scan with `--fail-on secret` must stay clean.
 
 ## Required verification
 
 ```sh
 npm test
-python -m unittest discover -s skills/ship/tests -v
+python -m unittest discover -s test/python -v
 npm pack --dry-run
 ```
 

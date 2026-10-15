@@ -2,7 +2,16 @@
 
 v0.5.0 | Standard Agent Skills layout
 
-One evidence-based release workflow with two independent specialist audits. Vercel Skills CLI is the preferred installation and update manager. No automatic deployment or production changes.
+One evidence-based release workflow with two independent specialist audits. It issues a GO, CONDITIONAL GO, or NO-GO decision from evidence, records it as a validated report, and can guard production deploys with optional hooks. Vercel Skills CLI is the preferred installation and update manager. No automatic deployment or production changes.
+
+## What's new in 0.5.0
+
+- Report artifact: `.ship/report.json` with a JSON schema. `report.py` validates it against the release policy, rejects secret-like content, and renders Markdown or a private HTML page.
+- Optional hooks: a Claude Code deploy guard that blocks production releases without a fresh passing report, a post-deploy smoke check, and a Git pre-push secret floor.
+- Stronger secret scan: AI provider, payment, cloud, and source-control credentials, Supabase service-role JWTs, client-exposed secret variable names, and unauthenticated Vercel cron handlers. Locations only, never values.
+- Vercel controls: Rolling Releases, Skew Protection, `CRON_SECRET`, Protection Bypass for Automation, sensitive environment variables, Firewall rate limits, and a read-only Vercel MCP evidence list.
+- Faster audits: specialists defer release decisions to `ship` and batch their questions. Backend controls load only when the project has a backend. Specialist items have stable `PL-NN` and `SEC-NN` IDs.
+- Fixes: correct fast-mode counts, rotate-first secret guidance instead of history rewrites, risk-based warning deadlines, and accurate Vercel migration advice.
 
 ## Skills
 
@@ -18,7 +27,7 @@ The original 40 source items and 25 backend additions remain intact. These are 6
 
 Existing users: complete [the migration guide](docs/skills-cli-migration.md) before running installation. Installation and updates overwrite selected managed content. Preserve local edits first.
 
-Prerequisites: Git and Node.js 22.20.0 or newer, with npm. This repository pins Skills CLI 1.7.2 for its documented commands and integration tests. Node 24 is used in CI. Python is optional for running the Ship preflight helper, not for installation.
+Prerequisites: Git and Node.js 22.20.0 or newer, with npm. This repository pins Skills CLI 1.7.2 for its documented commands and integration tests. Node 24 is used in CI. Python 3.10 or newer is optional. It runs the Ship preflight and report helpers and the Git pre-push hook, not installation.
 
 The same commands work in Windows PowerShell and macOS/Linux terminals. On Windows, use `npx.cmd` instead of `npx` when PowerShell blocks the npm PowerShell shim. Do not weaken the execution policy.
 
@@ -48,17 +57,17 @@ For one project, run the installation command from its root without `--global`. 
 skills/
   ship/
     SKILL.md
-    references/
-    scripts/
-    templates/
-    tests/
+    references/   gate criteria, Vercel playbook, hooks, report contract
+    scripts/      preflight.py (offline hints, secret floor), report.py (validate, render)
+    hooks/        deploy guard, post-deploy check, Git pre-push hook
+    templates/    Markdown report, JSON schema, worked example
   pre-launch-checklist/
     SKILL.md
   vibe-coder-security-checklist/
     SKILL.md
 ```
 
-Each skill has one authoritative source. The audit instructions and supporting files are preserved by this layout migration. No duplicate root `.skill` files or root `ship/` folder remain.
+Each skill has one authoritative source. Regression tests live in `test/`, outside the installed skill folders. No duplicate root `.skill` files or root `ship/` folder remain.
 
 Source mappings: [original 40 items](skills/ship/references/source-mapping.md), [25 backend items](skills/ship/references/backend-controls.md), [review protocol](skills/ship/references/backend-review.md).
 
@@ -96,15 +105,32 @@ The report artifact is `.ship/report.json`, validated against the release policy
 
 Invoke `$ship` in Codex or `/ship` in Claude Code and request a read-only production-readiness review. The report uses `PASS`, `FAIL`, `NEEDS VERIFICATION`, and `NOT APPLICABLE`, with `GO`, `CONDITIONAL GO`, or `NO-GO`. A passing report does not authorize a merge, deployment, credential rotation, or production-data change.
 
+A typical flow:
+
+1. `/ship` audits the repository and any connected provider evidence, then reports findings by severity.
+2. With your consent, it saves `.ship/report.json`, validates it, and renders a private HTML view.
+3. You fix blockers and re-run the audit until the verdict fits your release policy.
+4. With hooks installed, a production deploy command checks the report for the current commit and still asks you to approve.
+
+Run the offline helpers directly:
+
+```sh
+python skills/ship/scripts/preflight.py --root /path/to/project --format text
+python skills/ship/scripts/preflight.py --root /path/to/project --fail-on secret
+python skills/ship/scripts/report.py validate /path/to/project/.ship/report.json --root /path/to/project
+python skills/ship/scripts/report.py render /path/to/project/.ship/report.json --format html > report.html
+```
+
 ## Maintainer verification
 
 ```sh
 npm test
 npm run test:ship
 npm run verify:package
+python skills/ship/scripts/preflight.py --root . --fail-on secret --format text
 ```
 
-CI runs these checks on Windows, macOS, and Linux. A separate step installs the pinned upstream Skills CLI into a temporary tooling directory and runs `npm run test:skills-cli`. The integration script isolates HOME, user profile, agent directories, Git configuration, and update fixtures. It verifies discovery, supporting files, both installation scopes, and targeted updates through the real CLI.
+CI runs these checks on Windows, macOS, and Linux, plus a Python 3.10 job for the helpers. Actions are pinned to commit SHAs. A separate step installs the pinned upstream Skills CLI into a temporary tooling directory and runs `npm run test:skills-cli`. The integration script isolates HOME, user profile, agent directories, Git configuration, and update fixtures. It verifies discovery, supporting files, both installation scopes, and targeted updates through the real CLI.
 
 The integration tests validate distribution behavior. They do not launch Codex or Claude Code, audit a production application, publish a package, or modify your installed copies.
 

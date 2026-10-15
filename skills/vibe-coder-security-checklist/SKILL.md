@@ -225,4 +225,4 @@ Never issue security readiness if an applicable blocker or critical unknown is u
 
 ---
 
-> Also run the **pre-launch-checklist** to audit infrastructure, load handling, observability, and operations before launch.
+> Also run the **pre-launch-checklist** to audit infrastructure, load handling, observability, and operations before launch, and **ai-code-review** to review AI-generated changes before merge.

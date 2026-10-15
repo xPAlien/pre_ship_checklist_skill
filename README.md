@@ -1,8 +1,14 @@
 # Pre-Ship Checklist Skill
 
-v0.5.0 | Standard Agent Skills layout
+v0.6.0 | Standard Agent Skills layout
 
-One evidence-based release workflow with two independent specialist audits. It issues a GO, CONDITIONAL GO, or NO-GO decision from evidence, records it as a validated report, and can guard production deploys with optional hooks. Vercel Skills CLI is the preferred installation and update manager. No automatic deployment or production changes.
+One evidence-based release workflow with three independent specialist audits. It issues a GO, CONDITIONAL GO, or NO-GO decision from evidence, records it as a validated report, and can guard production deploys with optional hooks. Vercel Skills CLI is the preferred installation and update manager. No automatic deployment or production changes.
+
+## What's new in 0.6.0
+
+- New skill: `ai-code-review`, a 45-item pre-merge review for AI-generated or unfamiliar code. It moves here from the former `AI_code_review_skill` repository.
+- Review fixes: retries limited to idempotent operations, audience-based CORS guidance, a `NEEDS VERIFICATION` status, a read-only default, and thresholds labeled as starting points instead of universal rules.
+- Ship reads the review when a release includes code changes and cites items as `CR-x.y` with a severity mapping to P0 through P3.
 
 ## What's new in 0.5.0
 
@@ -20,6 +26,7 @@ One evidence-based release workflow with two independent specialist audits. It i
 | ship | Eight release gates, one consolidated report, optional JSON and HTML report artifact, optional deploy hooks | `$ship` in Codex or `/ship` in Claude Code |
 | pre-launch-checklist | 25 infrastructure and operations checks | `/pre-launch-checklist` in Claude Code |
 | vibe-coder-security-checklist | 36 application security checks | `/vibe-coder-security-checklist` in Claude Code |
+| ai-code-review | 45 pre-merge checks for AI-generated code | `/ai-code-review` in Claude Code |
 
 The original 40 source items and 25 backend additions remain intact. These are 65 source items with overlapping controls, not 65 independent security tests. The main workflow covers keys, cost abuse, payments, recovery, and launch operations. It supports optional read-only reviewers, requires scoped approval before fixes, and uses one writer.
 
@@ -32,18 +39,20 @@ Prerequisites: Git and Node.js 22.20.0 or newer, with npm. This repository pins 
 The same commands work in Windows PowerShell and macOS/Linux terminals. On Windows, use `npx.cmd` instead of `npx` when PowerShell blocks the npm PowerShell shim. Do not weaken the execution policy.
 
 ```sh
-# Discover the three skills without installing
+# Discover the four skills without installing
 npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --list
 
 # Install only this collection for Claude Code and Codex, globally
-npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --global --agent claude-code codex --skill ship pre-launch-checklist vibe-coder-security-checklist --copy
+npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --global --agent claude-code codex --skill ship pre-launch-checklist vibe-coder-security-checklist ai-code-review --copy
 
 # Inspect installed skills
 npx skills@1.7.2 list --global
 
 # Update only this collection, not unrelated skills
-npx skills@1.7.2 update ship pre-launch-checklist vibe-coder-security-checklist --global
+npx skills@1.7.2 update ship pre-launch-checklist vibe-coder-security-checklist ai-code-review --global
 ```
+
+Already installed the first three skills? Run the `add` command with `--skill ai-code-review` once, then use the four-skill `update` command.
 
 These repository-wide commands target the default branch. For a pending PR, test its checkout or an explicitly reviewed branch source. Do not expect unmerged changes from the default branch.
 
@@ -65,6 +74,10 @@ skills/
     SKILL.md
   vibe-coder-security-checklist/
     SKILL.md
+  ai-code-review/
+    SKILL.md
+    references/   45-item checklist, ten common AI code failures
+    LICENSE.txt   original copyright notice
 ```
 
 Each skill has one authoritative source. Regression tests live in `test/`, outside the installed skill folders. No duplicate root `.skill` files or root `ship/` folder remain.

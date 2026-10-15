@@ -17,7 +17,7 @@ const { basename, dirname, join, relative, resolve } = require("node:path");
 const { homedir, platform } = require("node:os");
 
 const ROOT = join(__dirname, "..");
-const SPECIALISTS = ["pre-launch-checklist", "vibe-coder-security-checklist"];
+const SPECIALISTS = ["pre-launch-checklist", "vibe-coder-security-checklist", "ai-code-review"];
 const SKILLS = ["ship", ...SPECIALISTS];
 const GOOSE_START = "# pre-ship-checklist-skill:start";
 const GOOSE_END = "# pre-ship-checklist-skill:end";
@@ -102,7 +102,7 @@ function version() {
 function printHelp() {
   console.log(`pre-ship-checklist-skill v${version()}
 
-Install and inspect three production-readiness skills.
+Install and inspect four production-readiness skills.
 
 Usage:
   pre-ship-checklist-skill install [options]
@@ -115,7 +115,8 @@ Options:
   --agent <name>   claude, codex, openclaw, hermes, pi, agents, goose
   --scope <scope>  global or project (default: global)
   --target <path>  Custom skills directory, or Goose hints file
-  --only <names>   ship, pre-launch-checklist, vibe-coder-security-checklist, all
+  --only <names>   ship, pre-launch-checklist, vibe-coder-security-checklist,
+                   ai-code-review, all
                    (comma-separated list accepted)
   --force          Overwrite only managed files that differ
   --dry-run        Preview all planned files without writing
@@ -287,6 +288,7 @@ Selected audits: ${selected.join(", ")}.
 - Ship: use the eight evidence-based release gates. Default to a read-only audit. Unverified critical controls block release.
 - Pre-launch: audit state, scale, database, async work, operations, monitoring, and recovery when applicable.
 - Security: audit auth, object authorization, input validation, secrets, sessions, dependency risks, and uploads when applicable.
+- Code review: before merge, check AI-generated or unfamiliar changes for comprehension, edge cases, security, performance, observability, and fit. Block merge on CRITICAL or HIGH findings.
 - Do not presume user confirmation equals tested evidence. Report PASS, FAIL, NEEDS VERIFICATION, or NOT APPLICABLE per control.
 - Deliver GO, CONDITIONAL GO, or NO-GO with evidence and blockers. No merge, production deployment, credential rotation, or protection removal without separate authorization.
 - Full authoritative checklists and scripts reside in this npm package. Goose hints are a summary, not a full AgentSkills installation.

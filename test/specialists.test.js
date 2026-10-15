@@ -22,8 +22,25 @@ for (const [name, total] of [['pre-launch-checklist', 25], ['vibe-coder-security
   })
 }
 
+test('ai-code-review keeps 45 stable CR items and consistent counts', () => {
+  const checklist = read('skills/ai-code-review/references/checklist.md')
+  const ids = [...checklist.matchAll(/^\| (\d)\.(\d+) \|/gm)].map(m => `${m[1]}.${m[2]}`)
+  const expected = [[1, 5], [2, 7], [3, 10], [4, 8], [5, 5], [6, 5], [7, 5]].flatMap(([d, n]) => Array.from({ length: n }, (_, i) => `${d}.${i + 1}`))
+  assert.deepEqual(ids, expected)
+  const skill = read('skills/ai-code-review/SKILL.md')
+  assert.match(skill, /all 45 items/)
+  assert.match(skill, /`CR-1\.1` to `CR-7\.5`/)
+  assert.match(skill, /NEEDS VERIFICATION/)
+  assert.match(skill, /read-only review/)
+  assert.match(checklist, /only to idempotent operations or requests carrying an idempotency key/)
+  assert.ok(!/Never use wildcard in production/.test(read('skills/ai-code-review/references/common-failures.md')))
+  assert.ok(!/AI never adds rate limiting/.test(checklist + read('skills/ai-code-review/references/common-failures.md')))
+  for (const ref of [...read('skills/ai-code-review/references/common-failures.md').matchAll(/\(CR-(\d\.\d+)\)/g)].map(m => m[1])) assert.ok(ids.includes(ref), ref)
+  assert.match(read('skills/ship/SKILL.md'), /`\.\.\/ai-code-review\/SKILL\.md`/)
+})
+
 test('specialists defer release decisions to ship and keep audit boundaries', () => {
-  for (const name of ['pre-launch-checklist', 'vibe-coder-security-checklist']) {
+  for (const name of ['pre-launch-checklist', 'vibe-coder-security-checklist', 'ai-code-review']) {
     const source = read(`skills/${name}/SKILL.md`)
     const description = source.match(/^description: "(.+)"$/m)[1]
     assert.match(description, /use the ship skill/)
@@ -43,7 +60,8 @@ test('ship cites specialist items by stable IDs and loads backend controls condi
   assert.match(read('skills/ship/references/source-mapping.md'), /`PL-01` to `PL-25`.+`SEC-01` to `SEC-36`/)
   const schema = JSON.parse(read('skills/ship/templates/ship-report.schema.json'))
   const pattern = new RegExp(schema.properties.findings.items.properties.controls.items.pattern)
-  for (const id of ['G6-12', 'BE-25', 'PL-07', 'SEC-27', 'V9']) assert.ok(pattern.test(id), id)
+  for (const id of ['G6-12', 'BE-25', 'PL-07', 'SEC-27', 'CR-2.3', 'CR-3.10', 'V9']) assert.ok(pattern.test(id), id)
+  for (const id of ['CR-8.1', 'CR-2', 'CR-x.y']) assert.ok(!pattern.test(id), id)
 })
 
 test('new Vercel controls exist with stable IDs', () => {

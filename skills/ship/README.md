@@ -1,6 +1,6 @@
 # Ship | Production Release Gate
 
-Version 0.5.0 | Standard distribution layout
+Version 0.6.0 | Standard distribution layout
 
 An evidence-based release readiness workflow for websites, apps, APIs, and AI services. The default action is a read-only audit, not a deployment. Vercel-specific checks apply only to Vercel-hosted release units.
 
@@ -34,16 +34,16 @@ ship/
     ship-report.example.json
 ```
 
-The two specialist audits live in sibling folders named `pre-launch-checklist` and `vibe-coder-security-checklist`. The main Ship workflow remains useful without them.
+The three specialist audits live in sibling folders named `pre-launch-checklist`, `vibe-coder-security-checklist`, and `ai-code-review`. The main Ship workflow remains useful without them.
 
 ## Installation and updates
 
 Use the repository's Vercel Skills CLI workflow. Existing installations need a reviewed backup and ownership handoff before the new manager writes files. See `docs/skills-cli-migration.md` at the repository root.
 
 ```sh
-npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --global --agent claude-code codex --skill ship pre-launch-checklist vibe-coder-security-checklist --copy
+npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --global --agent claude-code codex --skill ship pre-launch-checklist vibe-coder-security-checklist ai-code-review --copy
 npx skills@1.7.2 list --global
-npx skills@1.7.2 update ship pre-launch-checklist vibe-coder-security-checklist --global
+npx skills@1.7.2 update ship pre-launch-checklist vibe-coder-security-checklist ai-code-review --global
 ```
 
 The pinned manager requires Node.js 22.20.0 or newer. Git is also required. For project scope, omit `--global` during installation and use `--project` for updates. A CLI pin is not a source revision pin. Review source changes and retain backups before updates.

@@ -183,4 +183,4 @@ Never issue a GO verdict if an applicable blocker or critical unknown is unresol
 
 ---
 
-> Also run the **vibe-coder-security-checklist** to audit authentication, API security, and application-layer vulnerabilities before launch.
+> Also run the **vibe-coder-security-checklist** to audit authentication, API security, and application-layer vulnerabilities before launch, and **ai-code-review** to review AI-generated changes before merge.

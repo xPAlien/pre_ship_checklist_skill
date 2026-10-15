@@ -2,7 +2,7 @@
 
 ## 1. Scope
 
-This guide switches the three Pre-Ship skills from manually copied or npm-installer copies to Skills CLI management. It does not update npm globally, remove other skills, install a coding agent, or change production resources.
+This guide switches the three original Pre-Ship skills from manually copied or npm-installer copies to Skills CLI management. The fourth skill, `ai-code-review`, has no legacy installer copies. Add it with Skills CLI after migration, as section 3 shows. If you copied it by hand from the former `AI_code_review_skill` repository, back up and move that copy out of discovery paths first, like the other legacy folders. It does not update npm globally, remove other skills, install a coding agent, or change production resources.
 
 Do not run this migration automatically from a build, package lifecycle hook, or agent audit. Pause coding-agent sessions before moving active skill folders. Work without administrator privileges.
 
@@ -35,6 +35,9 @@ Use Git and Node.js 22.20.0 or newer. The supported CLI version for this migrati
 npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --list
 npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --global --agent claude-code codex --skill ship pre-launch-checklist vibe-coder-security-checklist --copy
 npx skills@1.7.2 list --global
+
+# Then add the code review skill
+npx skills@1.7.2 add xPAlien/pre_ship_checklist_skill --global --agent claude-code codex --skill ai-code-review --copy
 ```
 
 On Windows, substitute `npx.cmd` when needed to avoid the PowerShell npm shim. Do not use `iex`, remote shell execution, `sudo`, administrator elevation, or an execution-policy bypass.
@@ -58,12 +61,12 @@ Keep local customizations in a separate owned skill or a reviewed fork. Do not c
 Review upstream changes and back up installed content before an update. An update is a write operation, not a read-only preview.
 
 ```sh
-# Global: only these three skills
-npx skills@1.7.2 update ship pre-launch-checklist vibe-coder-security-checklist --global
+# Global: only this collection
+npx skills@1.7.2 update ship pre-launch-checklist vibe-coder-security-checklist ai-code-review --global
 npx skills@1.7.2 list --global
 
 # Project: run from the intended project root
-npx skills@1.7.2 update ship pre-launch-checklist vibe-coder-security-checklist --project
+npx skills@1.7.2 update ship pre-launch-checklist vibe-coder-security-checklist ai-code-review --project
 npx skills@1.7.2 list
 ```
 

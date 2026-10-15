@@ -13,7 +13,7 @@ The Ship decision has one machine-readable source, `.ship/report.json`. Markdown
 
 1. Run `python "${CLAUDE_SKILL_DIR}/scripts/report.py" skeleton --root <repo>`. It fills the current SHA and branch and starts at `NO-GO` with every gate `NEEDS VERIFICATION`.
 2. Fill gates, findings, evidence, unrun checks, backend coverage, owner actions, and the runbook from the audit. Every finding needs controls, severity, status, evidence location, smallest fix, and owner.
-3. Cite controls by stable ID: `Gx-NN`, `BE-NN`, `PL-NN` for pre-launch items, `SEC-NN` for security items, `V1` to `V9` for Vercel playbook sections.
+3. Cite controls by stable ID: `Gx-NN`, `BE-NN`, `PL-NN` for pre-launch items, `SEC-NN` for security items, `CR-x.y` for code review items, `V1` to `V9` for Vercel playbook sections.
 4. Cite evidence by location: file and line, command, dashboard page, or test name. Never paste a credential, token, signed URL, bypass secret, or customer record.
 
 ## 3. Validate

@@ -8,7 +8,7 @@ const { pathToFileURL } = require('node:url')
 const root = resolve(__dirname, '..')
 const entry = process.env.SKILLS_CLI_ENTRY || join(process.env.RUNNER_TEMP || '', 'pre-ship-skills-cli', 'node_modules', 'skills', 'bin', 'cli.mjs')
 assert.ok(existsSync(entry), 'Install skills@1.7.2 into RUNNER_TEMP/pre-ship-skills-cli or set SKILLS_CLI_ENTRY')
-const names = ['ship', 'pre-launch-checklist', 'vibe-coder-security-checklist']
+const names = ['ship', 'pre-launch-checklist', 'vibe-coder-security-checklist', 'ai-code-review']
 const sandbox = mkdtempSync(join(tmpdir(), 'ship-real-cli-'))
 const logs = []
 function environment(label) {
@@ -55,7 +55,7 @@ try {
   assert.equal(run(local, ['--version']).trim(), '1.7.2')
   const list = run(local, ['add', root, '--list'])
   for (const name of names) assert.ok(list.includes(name), `Discovery missed ${name}`)
-  assert.match(list, /3 skills/)
+  assert.match(list, /4 skills/)
   assert.ok(!existsSync(join(local.home, '.agents', 'skills')))
   add(local, root, false)
   verify(local, false)

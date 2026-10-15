@@ -2,7 +2,7 @@
 name: ship
 description: Review production release readiness for a website, SaaS app, API, AI service, or Vercel project. Use for launch checklists, pre-deployment audits, "ready to deploy" or "ship it" requests, go-live reviews, production QA, and release approval. This is the entry point for release readiness. It coordinates the pre-launch and security specialist checklists. Inspect the repository and available runtime evidence, classify risk, and issue an evidence-based GO or NO-GO report. Audit first. Never deploy or change production without explicit authorization.
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Ship | Production Release Gate
@@ -41,8 +41,8 @@ Do not assume that a public marketing site and a private API require the same SE
 
 This skill is the single release entry point. It includes a complete evidence-based checklist and does not depend on the presence of another skill to evaluate critical controls.
 
-- If installed, read `../pre-launch-checklist/SKILL.md` for a supplementary infrastructure review and `../vibe-coder-security-checklist/SKILL.md` for a supplementary security review. Their checklists remain independent, but their findings belong in the same Ship report.
-- Evaluate a given control once, even if several checklists describe the same risk. Keep references to contributing checklist item IDs as supporting provenance. Cite specialist items as `PL-NN` (pre-launch item NN) and `SEC-NN` (security item NN), for example `PL-07` or `SEC-27`.
+- If installed, read `../pre-launch-checklist/SKILL.md` for a supplementary infrastructure review and `../vibe-coder-security-checklist/SKILL.md` for a supplementary security review. When the release includes code changes, read `../ai-code-review/SKILL.md` to review the release diff, or reuse an existing review of the same revision. Their checklists remain independent, but their findings belong in the same Ship report.
+- Evaluate a given control once, even if several checklists describe the same risk. Keep references to contributing checklist item IDs as supporting provenance. Cite specialist items as `PL-NN` (pre-launch item NN), `SEC-NN` (security item NN), and `CR-x.y` (code review item x.y), for example `PL-07`, `SEC-27`, or `CR-2.3`. Map code review severity as `CRITICAL` to P0 when exposure or data loss is active, otherwise P1, `HIGH` to P1, `MEDIUM` to P2, and `LOW` to P3.
 - Apply the Ship severity and release-decision policy when specialist checklists use different blocker or warning defaults. Inspect the actual project and classify applicability before assigning severity.
 - The legacy skills' interactive yes/no format is not proof of validation. Prefer repository inspection, direct negative tests, runtime evidence, and provider records. A verbal confirmation alone is `NEEDS VERIFICATION` when a critical control needs evidence.
 - Run or recommend only tests relevant to the discovered stack, risk, and release scope. Do not ask for details visible in the repository or connected provider.
@@ -185,4 +185,4 @@ No scores that hide blockers. No invented screenshots, passing tests, dependency
 - `scripts/preflight.py`: offline, read-only repo inspection with no claim of production readiness. `--fail-on secret` and `--format text` support hooks and CI.
 - `scripts/report.py`: offline report skeleton, validation, and Markdown or HTML rendering.
 - `hooks/`: hook scripts installed into a project by `pre-ship-checklist-skill install-hooks`.
-- `../pre-launch-checklist/SKILL.md` and `../vibe-coder-security-checklist/SKILL.md`: optional independent specialist checklists installed by the unified installer.
+- `../pre-launch-checklist/SKILL.md`, `../vibe-coder-security-checklist/SKILL.md`, and `../ai-code-review/SKILL.md`: optional independent specialist checklists installed by the unified installer.

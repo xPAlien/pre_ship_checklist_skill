@@ -24,21 +24,24 @@ const samples = {
   "ship/references/backend-review.md": /one designated writer/,
   "ship/scripts/preflight.py": /preflight|def main/,
   "pre-launch-checklist/SKILL.md": /Pre-Launch Production Checklist/,
-  "vibe-coder-security-checklist/SKILL.md": /Vibe Coder Pre-Ship Security Checklist/
+  "vibe-coder-security-checklist/SKILL.md": /Vibe Coder Pre-Ship Security Checklist/,
+  "ai-code-review/SKILL.md": /name: ai-code-review/,
+  "ai-code-review/references/checklist.md": /CR-3\.4/,
+  "ai-code-review/references/common-failures.md": /CR-2\.2/
 };
 
 test("help and version", async () => {
   const { stdout, stderr } = await run();
   assert.equal(stderr, "");
-  assert.match(stdout, /Install and inspect three production-readiness skills/);
+  assert.match(stdout, /Install and inspect four production-readiness skills/);
   assert.match(stdout, /codex/);
   const v = await run(["--version"]);
   assert.equal(v.stdout.trim(), packageJson.version);
 });
 
-test("list includes all three independent skills", async () => {
+test("list includes all four independent skills", async () => {
   const { stdout } = await run(["list"]);
-  assert.deepEqual(stdout.trim().split("\n"), ["ship", "pre-launch-checklist", "vibe-coder-security-checklist"]);
+  assert.deepEqual(stdout.trim().split("\n"), ["ship", "pre-launch-checklist", "vibe-coder-security-checklist", "ai-code-review"]);
 });
 
 test("target list includes Codex, Claude, and legacy agents", async () => {

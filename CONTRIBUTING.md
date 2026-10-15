@@ -2,13 +2,13 @@
 
 ## Source layout
 
-The project contains an eight-gate release coordinator in `skills/ship/` and two independent specialists under `skills/<name>/SKILL.md`. Keep all three usable separately. Reuse risk evidence and deduplicate findings when the main `ship` skill coordinates an audit.
+The project contains an eight-gate release coordinator in `skills/ship/` and three independent specialists under `skills/<name>/SKILL.md`. Keep all four usable separately. Reuse risk evidence and deduplicate findings when the main `ship` skill coordinates an audit.
 
 ## Propose a checklist change
 
 Record the risk, affected project types, evidence for the control, severity when applicable, and smallest practical correction. Avoid universal requirements for stack- or risk-specific features. Examples: public sites do not need auth, internal APIs do not need sitemaps, and managed platforms do not always need read replicas or separate WebSocket hosts.
 
-The specialist audits retain 25 and 36 numbered checks. Preserve numbering and update any summaries when items change. Ship cites them as `PL-NN` and `SEC-NN`. `test/specialists.test.js` checks item numbering, blocker lists, and fast-mode counts. The central Ship checklist uses stable `Gx-NN` identifiers. Map newly added source material and avoid duplicate checks.
+The specialist audits retain 25, 36, and 45 numbered checks. Preserve numbering and update any summaries when items change. Ship cites them as `PL-NN`, `SEC-NN`, and `CR-x.y`. `test/specialists.test.js` checks item numbering, blocker lists, and fast-mode counts. The central Ship checklist uses stable `Gx-NN` identifiers. Map newly added source material and avoid duplicate checks.
 
 ## Submit a PR
 

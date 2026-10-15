@@ -66,4 +66,4 @@ The first 20 are from the typed user checklist. The second 20 are from the two a
 
 ## Specialist checklist identifiers
 
-The specialist checklists keep their original numbering. Ship findings cite them as `PL-01` to `PL-25` for `pre-launch-checklist` items 1 to 25 and `SEC-01` to `SEC-36` for `vibe-coder-security-checklist` items 1 to 36.
+The specialist checklists keep their original numbering. Ship findings cite them as `PL-01` to `PL-25` for `pre-launch-checklist` items 1 to 25, `SEC-01` to `SEC-36` for `vibe-coder-security-checklist` items 1 to 36, and `CR-1.1` to `CR-7.5` for the 45 `ai-code-review` items.

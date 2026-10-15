@@ -5,10 +5,10 @@ const { tmpdir } = require('node:os')
 const { join } = require('node:path')
 const test = require('node:test')
 const root = join(__dirname, '..')
-const names = ['pre-launch-checklist', 'ship', 'vibe-coder-security-checklist']
+const names = ['ai-code-review', 'pre-launch-checklist', 'ship', 'vibe-coder-security-checklist']
 const cli = join(root, 'bin', 'pre-ship-checklist-skill.js')
 
-test('exactly three standard folders with matching frontmatter and no flat duplicates', () => {
+test('exactly four standard folders with matching frontmatter and no flat duplicates', () => {
   assert.deepEqual(readdirSync(join(root, 'skills')).sort(), names)
   for (const name of names) {
     const source = readFileSync(join(root, 'skills', name, 'SKILL.md'), 'utf8')
@@ -61,7 +61,7 @@ test('installation docs pin CLI version and do not broaden named updates', () =>
   const readme = readFileSync(join(root, 'README.md'), 'utf8')
   const migration = readFileSync(join(root, 'docs', 'skills-cli-migration.md'), 'utf8')
   assert.match(readme, /skills@1\.7\.2 add/)
-  assert.match(readme, /update ship pre-launch-checklist vibe-coder-security-checklist --global/)
+  assert.match(readme, /update ship pre-launch-checklist vibe-coder-security-checklist ai-code-review --global/)
   assert.match(migration, /backup outside all agent skill-discovery directories/)
   assert.match(migration, /Do not use two managers|After migration, stop using the legacy installer/)
 })

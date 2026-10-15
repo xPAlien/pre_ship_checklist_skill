@@ -1,6 +1,6 @@
 # Maintainer guidance
 
-This repository distributes three skill packages: the main `ship` release gate and two independent specialist checklists. Do not collapse the specialists into a single checklist. Do not create duplicate findings when the `ship` skill coordinates specialist checks.
+This repository distributes four skill packages: the main `ship` release gate and three independent specialist checklists. Do not collapse the specialists into a single checklist. Do not create duplicate findings when the `ship` skill coordinates specialist checks.
 
 ## Source ownership
 
@@ -11,14 +11,15 @@ This repository distributes three skill packages: the main `ship` release gate a
 - `skills/ship/hooks/`: opt-in local guardrails installed by `install-hooks`. They are not CI enforcement.
 - `skills/pre-launch-checklist/SKILL.md`: independent 25-item infrastructure audit.
 - `skills/vibe-coder-security-checklist/SKILL.md`: independent 36-item security audit.
+- `skills/ai-code-review/SKILL.md` and `references/`: independent 45-item pre-merge review of AI-generated code, cited as `CR-x.y`. Its `LICENSE.txt` preserves the original copyright notice.
 - `bin/pre-ship-checklist-skill.js`: installer and self-checker for supported agents.
 - `test/*.test.js` and `test/python/`: regression tests. Keep tests out of `skills/` so they are not installed into user skill folders.
 
 ## Standards
 
-1. All three installed folder-based skills use `<skills>/<name>/SKILL.md`. The three authoritative sources live in `skills/<name>/SKILL.md`. Vercel Skills CLI is the preferred manager. The compatibility installer copies those same folders without converting flat sources.
+1. All four installed folder-based skills use `<skills>/<name>/SKILL.md`. The four authoritative sources live in `skills/<name>/SKILL.md`. Vercel Skills CLI is the preferred manager. The compatibility installer copies those same folders without converting flat sources.
 2. Never delete old skill files or overwrite changed installed files by default. Report collisions before writing anything. `--force` affects only managed paths.
-3. Keep two specialist sources independently usable. Keep original checklist item counts accurate. Avoid universal policy claims for inherently conditional requirements.
+3. Keep the three specialist sources independently usable. Keep original checklist item counts accurate. Avoid universal policy claims for inherently conditional requirements.
 4. Security, data loss, missing release approval, and critical unknowns fail the central Ship gate. Do not treat an agent report as a CI-enforced block.
 5. In `audit` mode, collect evidence without production or Git mutations. No unauthorized deployment, merge, credential rotation, production migration, protection change, or live payment.
 6. Every checklist change needs corresponding documentation or regression tests. New checklist items should have stable IDs or a clear ordinal mapping.

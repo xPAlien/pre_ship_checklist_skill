@@ -1,4 +1,4 @@
-# Ship Audit Checklist | v0.5.0
+# Ship Audit Checklist | v0.6.0
 
 Every check needs a status, evidence source, and an owner when unresolved. `NOT APPLICABLE` needs an explicit project-specific reason. These are evaluation requirements, not instructions to install every third-party service.
 

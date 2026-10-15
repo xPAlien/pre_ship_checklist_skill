@@ -71,7 +71,8 @@ test('review groups partition every backend control without overlap', () => {
 })
 
 test('main workflow loads the supplement and preserves mutation boundaries', () => {
-  assert.match(skill, /Read `references\/backend-controls.md` and `references\/backend-review.md` on every audit/)
+  assert.match(skill, /Read `references\/backend-controls.md` and `references\/backend-review.md` whenever the release unit has server code, persisted data, authentication, uploads, payments, metered APIs, scheduled jobs, or provider accounts/)
+  assert.match(skill, /record each BE control as `NOT APPLICABLE` with the one shared reason/)
   for (const required of [
     'Show the complete findings and proposed edits before making fixes',
     'Stop for explicit approval of the named scope',
@@ -123,4 +124,5 @@ test('package, lockfile, skill and versioned documentation agree', () => {
   assert.ok(read('README.md').includes(`v${pkg.version}`))
   assert.ok(read('skills/ship/README.md').includes(`Version ${pkg.version}`))
   assert.ok(controls.includes(`v${pkg.version}`))
+  assert.ok(read('skills/ship/references/checklist.md').includes(`v${pkg.version}`))
 })

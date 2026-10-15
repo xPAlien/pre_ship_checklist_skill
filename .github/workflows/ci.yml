@@ -25,27 +25,49 @@ jobs:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24'
           cache: npm
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
       - name: Install package dependencies
         run: npm ci --ignore-scripts
-      - name: Test installer and contracts
+      - name: Test installer, hooks and contracts
         run: npm test
-      - name: Test preflight helper
+      - name: Test preflight and report helpers
         run: npm run test:ship
+      - name: Repository secret floor
+        run: python skills/ship/scripts/preflight.py --root . --fail-on secret --format text
+      - name: Validate example report
+        run: python skills/ship/scripts/report.py validate skills/ship/templates/ship-report.example.json
       - name: Validate packaged files
         run: npm run verify:package
       - name: Install pinned Skills CLI into temporary tooling
         run: npm install --prefix "$RUNNER_TEMP/pre-ship-skills-cli" --ignore-scripts --no-audit --no-fund --save-exact skills@1.7.2
       - name: Test real Skills CLI installation and update lifecycle
         run: npm run test:skills-cli
+
+  python-minimum:
+    name: python 3.10 helpers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.10'
+      - name: Test preflight and report helpers on the minimum version
+        run: python -m unittest discover -s test/python -v

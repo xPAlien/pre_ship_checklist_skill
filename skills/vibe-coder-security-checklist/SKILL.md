@@ -1,6 +1,6 @@
 ---
 name: vibe-coder-security-checklist
-description: "Security checklist for web applications before shipping to a client or going live. Use this skill whenever the user is about to deliver to a client, do a security review, or ship an app and wants to check for vulnerabilities. Triggers on: security checklist, security review, client delivery, pre-ship security, before I deliver, check for vulnerabilities, is my app secure, harden my app, security audit, vibe coder checklist. Also trigger proactively when a user has just finished building an app with authentication or user data and is talking about delivery or deployment."
+description: "Independent 36-item application security audit: authentication, sessions, authorization, input validation, CORS, CSRF, headers, database access, secrets, dependencies, uploads, and MFA. Use when the user explicitly asks for a security checklist, a security review before client delivery, or names this skill. For an overall release readiness or GO/NO-GO decision, use the ship skill, which reads this checklist as a supplement."
 ---
 
 # Vibe Coder Pre-Ship Security Checklist
@@ -33,7 +33,7 @@ Blockers: items 1, 2, 3, 6, 8, 10, 11, 12, 13, 17, 18, 19, 21, 26, 27, 34
 
 ### Step 3 — Run the checklist
 
-Present items one at a time. Show progress ("Item X of 36" or "Item X of 15" in fast mode). For each item, record PASS, FAIL, NEEDS VERIFICATION, or NOT APPLICABLE with evidence. Verbal assurance alone does not verify a critical control.
+Inspect the repository and available provider evidence for every selected item first. Then ask the user about all unresolved items in one batch, grouped by section. Show coverage ("X of 36 evaluated" or "X of 16 evaluated" in fast mode). For each item, record PASS, FAIL, NEEDS VERIFICATION, or NOT APPLICABLE with evidence. Verbal assurance alone does not verify a critical control.
 
 - Applicable failed baseline blockers require correction before release.
 - Warning due dates depend on real risk and an accountable owner, not a universal 30-day deadline.
@@ -113,7 +113,7 @@ Baseline blocker and warning labels are screening defaults, not universal archit
 
 16. **[WARNING] Rate limiting on all public-facing endpoints**
     - Risk: No rate limit means your API can be scraped, abused, or DoS'd without friction.
-    - Fix: Apply a global rate limit at the edge (Cloudflare) or API layer (Upstash Redis).
+    - Fix: Apply a global rate limit at the edge (Vercel Firewall rate-limit rules, Cloudflare) or API layer (Upstash Redis or equivalent).
 
 17. **[BLOCKER] CORS policy is correct for credentialed and public resource access**
     - Risk: An overly broad credentialed cross-origin policy can expose private responses to untrusted origins.
@@ -161,7 +161,7 @@ Baseline blocker and warning labels are screening defaults, not universal archit
 
 27. **[BLOCKER] `.env` not in git history**
     - Risk: `.env` added and later removed is still in git history and accessible via `git log`.
-    - Fix: Run `git log -- .env`. If it appears, purge it with `git filter-repo` and rotate every secret in it.
+    - Fix: Run `git log --all -- .env '*.env*'` and report paths and commits, never values. If a real secret appears, treat it as exposed: the owner revokes or rotates it first. Rewriting Git history is a separate owner decision with collaborator impact, never an audit step, and never a substitute for rotation.
 
 28. **[WARNING] SSL certificate installed and valid**
     - Risk: Expired certificates break your app and expose users to MITM attacks.
@@ -211,7 +211,7 @@ After auditing, produce a report in this structure:
 BLOCKERS (fix before delivery):
 - [#] [item name]: [specific fix for their stack]
 
-WARNINGS (fix within 30 days):
+WARNINGS (owner and due date set by actual risk):
 - [#] [item name]: [specific fix for their stack]
 
 NOT APPLICABLE:

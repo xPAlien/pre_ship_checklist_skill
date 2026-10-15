@@ -1,6 +1,6 @@
 # Pre-Ship Checklist Skill
 
-v0.4.0 | Standard Agent Skills layout
+v0.5.0 | Standard Agent Skills layout
 
 One evidence-based release workflow with two independent specialist audits. Vercel Skills CLI is the preferred installation and update manager. No automatic deployment or production changes.
 
@@ -8,7 +8,7 @@ One evidence-based release workflow with two independent specialist audits. Verc
 
 | Skill | Purpose | Invocation |
 | --- | --- | --- |
-| ship | Eight release gates and one consolidated report | `$ship` in Codex or `/ship` in Claude Code |
+| ship | Eight release gates, one consolidated report, optional JSON and HTML report artifact, optional deploy hooks | `$ship` in Codex or `/ship` in Claude Code |
 | pre-launch-checklist | 25 infrastructure and operations checks | `/pre-launch-checklist` in Claude Code |
 | vibe-coder-security-checklist | 36 application security checks | `/vibe-coder-security-checklist` in Claude Code |
 
@@ -75,7 +75,22 @@ node bin/pre-ship-checklist-skill.js doctor --agent codex
 
 It refuses symlink-managed destinations and recognized Skills CLI ownership records even with `--force`. Custom targets require explicit ownership review. For normal unmanaged destinations, differing files still stop installation before writes. Unrelated files remain untouched.
 
-No npm publication is required for Skills CLI to install from this repository. The package version remains 0.4.0 for this distribution-only refactor. Publishing the npm package remains a separate approval.
+No npm publication is required for Skills CLI to install from this repository. Publishing the npm package remains a separate approval. The registry package lags this repository, so use a reviewed checkout for `install-hooks` until a release containing it is published.
+
+## Optional hooks and report artifact
+
+From a project root, with a reviewed checkout of this repository:
+
+```sh
+node <checkout>/bin/pre-ship-checklist-skill.js install-hooks --dry-run
+node <checkout>/bin/pre-ship-checklist-skill.js install-hooks --git --write-settings
+```
+
+- Deploy guard (Claude Code PreToolUse): denies `vercel --prod`, promote, rollback, rolling-release advances, production `git push`, `gh pr merge`, and package publishing unless `.ship/report.json` matches HEAD, is fresh, and is not NO-GO. A passing report still asks a person to confirm. Migrations and provider configuration changes always ask.
+- Post-deploy follow-through (PostToolUse): read-only smoke checks against the new deployment URL and the G7-08 checklist.
+- Git pre-push secret floor: blocks pushes with credential patterns, service-role JWTs, client-exposed secret variable names, or tracked env files.
+
+The report artifact is `.ship/report.json`, validated against the release policy and rendered to Markdown or a private HTML page. Details: [hooks](skills/ship/references/hooks.md), [report artifact](skills/ship/references/report-artifact.md). Hooks are local guardrails. Protected branches and required CI checks remain the enforced boundary.
 
 ## Run the audit
 

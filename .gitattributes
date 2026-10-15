@@ -1,3 +1,8 @@
 * text=auto
 *.skill text eol=lf
 *.md text eol=lf
+*.sh text eol=lf
+*.cjs text eol=lf
+*.js text eol=lf
+*.py text eol=lf
+*.json text eol=lf

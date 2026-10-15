@@ -1,6 +1,6 @@
 # Official Documentation and Review Basis
 
-Reviewed 2026-10-09. Provider plans, commands, and compliance requirements change. Recheck relevant documentation during each release.
+Reviewed 2026-10-15. Provider plans, commands, and compliance requirements change. Recheck relevant documentation during each release.
 
 ## Agent skill format
 
@@ -17,6 +17,14 @@ Reviewed 2026-10-09. Provider plans, commands, and compliance requirements chang
 - Preview to production behavior: https://vercel.com/docs/deployments/promote-preview-to-production
 - Rollback production deployment: https://vercel.com/docs/deployments/rollback-production-deployment
 - Spend Management and optimization: https://vercel.com/docs/pricing/manage-and-optimize-usage
+- Rolling Releases: https://vercel.com/docs/rolling-releases
+- Skew Protection: https://vercel.com/docs/skew-protection
+- Cron job security with CRON_SECRET: https://vercel.com/docs/cron-jobs/manage-cron-jobs
+- Protection Bypass for Automation: https://vercel.com/docs/security/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation
+- Sensitive environment variables: https://vercel.com/docs/environment-variables/sensitive-environment-variables
+- Vercel Firewall custom rules and rate limiting: https://vercel.com/docs/vercel-firewall/vercel-waf/custom-rules
+- Vercel MCP server: https://vercel.com/docs/agent-resources/vercel-mcp
+- Claude Code hooks: https://code.claude.com/docs/en/hooks
 - Next.js production optimization: https://nextjs.org/docs/app/guides/production-checklist
 - Next.js metadata and OG: https://nextjs.org/docs/app/getting-started/metadata-and-og-images
 - Next.js sitemap: https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap

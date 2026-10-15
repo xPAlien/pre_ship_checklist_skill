@@ -76,10 +76,22 @@ test("--only ship includes every reference and helper", async () => {
   try {
     const { stdout } = await run(["install", "--only", "ship", "--target", target]);
     assert.match(stdout, /Installed \d+ managed file/);
-    for (const path of ["SKILL.md", "README.md", "references/source-mapping.md", "references/vercel.md", "references/backend-controls.md", "references/backend-review.md", "templates/ship-report.md", "tests/test_preflight.py"]) {
+    for (const path of ["SKILL.md", "README.md", "references/source-mapping.md", "references/vercel.md", "references/backend-controls.md", "references/backend-review.md", "references/hooks.md", "references/report-artifact.md", "templates/ship-report.md", "templates/ship-report.schema.json", "templates/ship-report.example.json", "scripts/report.py", "hooks/deploy-guard.cjs", "hooks/post-deploy.cjs", "hooks/ship-hooks-lib.cjs", "hooks/git-pre-push.sh"]) {
       assert.equal(existsSync(join(target, "ship", path)), true, path);
     }
+    assert.equal(existsSync(join(target, "ship", "tests")), false, "regression tests stay out of installed skills");
     assert.equal(existsSync(join(target, "pre-launch-checklist")), false);
+  } finally { rmSync(target, { recursive: true, force: true }); }
+});
+
+test("--only accepts a comma-separated list", async () => {
+  const target = tempTarget();
+  try {
+    await run(["install", "--only", "ship,vibe-coder-security-checklist", "--target", target]);
+    assert.equal(existsSync(join(target, "ship", "SKILL.md")), true);
+    assert.equal(existsSync(join(target, "vibe-coder-security-checklist", "SKILL.md")), true);
+    assert.equal(existsSync(join(target, "pre-launch-checklist")), false);
+    await assert.rejects(run(["install", "--only", "ship,unknown", "--target", target]), e => e.code === 1 && /Unknown skill: unknown/.test(e.stderr));
   } finally { rmSync(target, { recursive: true, force: true }); }
 });
 
@@ -162,7 +174,9 @@ test("rejects bad agent, skill and scope", async () => {
     ["install", "--agent", "mystery"],
     ["install", "--only", "unknown"],
     ["install", "--scope", "staging"],
-    ["install", "--agent"]
+    ["install", "--agent"],
+    ["install", "--git"],
+    ["install", "--write-settings"]
   ]) {
     await assert.rejects(run(args), error => error.code === 1);
   }

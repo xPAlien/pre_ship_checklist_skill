@@ -8,14 +8,14 @@ The project contains an eight-gate release coordinator in `skills/ship/` and two
 
 Record the risk, affected project types, evidence for the control, severity when applicable, and smallest practical correction. Avoid universal requirements for stack- or risk-specific features. Examples: public sites do not need auth, internal APIs do not need sitemaps, and managed platforms do not always need read replicas or separate WebSocket hosts.
 
-The specialist audits retain 25 and 36 numbered checks. Preserve numbering and update any summaries when items change. The central Ship checklist uses stable `Gx-NN` identifiers. Map newly added source material and avoid duplicate checks.
+The specialist audits retain 25 and 36 numbered checks. Preserve numbering and update any summaries when items change. Ship cites them as `PL-NN` and `SEC-NN`. `test/specialists.test.js` checks item numbering, blocker lists, and fast-mode counts. The central Ship checklist uses stable `Gx-NN` identifiers. Map newly added source material and avoid duplicate checks.
 
 ## Submit a PR
 
 1. Branch from `master` and keep the scope reviewable.
 2. Update the appropriate skill files and documentation.
 3. Add regression tests for changed installer behavior or preflight logic.
-4. Run `npm test`, `python -m unittest discover -s skills/ship/tests -v`, and `npm pack --dry-run`.
+4. Run `npm test`, `python -m unittest discover -s test/python -v`, and `npm pack --dry-run`.
 5. Confirm both `--agent codex` and `--agent claude` still install all managed files into skill folders, and confirm `--dry-run` leaves the destination unchanged.
 6. Include the release impact, version decision, tests, and any migration notes in the PR description.
 

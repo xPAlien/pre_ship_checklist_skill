@@ -1,5 +1,7 @@
 # Ship Report | <project> | <date>
 
+<!-- Machine-readable source: .ship/report.json (templates/ship-report.schema.json). Render with scripts/report.py render --format md. -->
+
 ## Decision
 
 - Verdict: `GO` / `CONDITIONAL GO` / `NO-GO`

@@ -1,0 +1,205 @@
+{
+  "schema_version": "1.0",
+  "project": "example-saas",
+  "generated_utc": "2026-10-15T12:00:00Z",
+  "mode": "audit",
+  "revision": {
+    "sha": "0123456789abcdef0123456789abcdef01234567",
+    "branch": "main",
+    "dirty": false
+  },
+  "target": {
+    "provider": "Vercel",
+    "environment": "production",
+    "domain": "app.example.com"
+  },
+  "verdict": "NO-GO",
+  "release_owner": "Release owner (example)",
+  "approval": {
+    "status": "NOT REQUESTED"
+  },
+  "production_action_performed": false,
+  "profile": {
+    "application_type": "authenticated SaaS app",
+    "audience": "authenticated users",
+    "applicable": [
+      "security",
+      "data",
+      "payments",
+      "AI"
+    ],
+    "not_applicable": [
+      {
+        "category": "sitemap for app routes",
+        "reason": "Only the marketing root is public"
+      }
+    ]
+  },
+  "gates": {
+    "G0": {
+      "pass": 6,
+      "fail": 0,
+      "needs_verification": 0,
+      "not_applicable": 0,
+      "decision": "PASS",
+      "critical": true
+    },
+    "G1": {
+      "pass": 10,
+      "fail": 1,
+      "needs_verification": 1,
+      "not_applicable": 0,
+      "decision": "FAIL",
+      "critical": true
+    },
+    "G2": {
+      "pass": 5,
+      "fail": 0,
+      "needs_verification": 1,
+      "not_applicable": 0,
+      "decision": "NEEDS VERIFICATION",
+      "critical": true
+    },
+    "G3": {
+      "pass": 9,
+      "fail": 0,
+      "needs_verification": 0,
+      "not_applicable": 3,
+      "decision": "PASS",
+      "critical": true
+    },
+    "G4": {
+      "pass": 7,
+      "fail": 0,
+      "needs_verification": 0,
+      "not_applicable": 0,
+      "decision": "PASS",
+      "critical": false
+    },
+    "G5": {
+      "pass": 8,
+      "fail": 0,
+      "needs_verification": 0,
+      "not_applicable": 6,
+      "decision": "PASS",
+      "critical": false
+    },
+    "G6": {
+      "pass": 8,
+      "fail": 0,
+      "needs_verification": 1,
+      "not_applicable": 0,
+      "decision": "NEEDS VERIFICATION",
+      "critical": true
+    },
+    "G7": {
+      "pass": 7,
+      "fail": 0,
+      "needs_verification": 0,
+      "not_applicable": 0,
+      "decision": "PASS",
+      "critical": true
+    }
+  },
+  "findings": [
+    {
+      "id": "F-01",
+      "controls": [
+        "G1-01",
+        "BE-01"
+      ],
+      "severity": "P0",
+      "status": "FAIL",
+      "critical": true,
+      "title": "Private AI provider key referenced through a client-exposed variable name",
+      "impact": "Any visitor reads the key from the browser bundle and bills usage to the account.",
+      "evidence": "lib/ai.ts:4 and provider env settings (value not recorded)",
+      "fix": "Move the call to a server route, rename the variable without the public prefix, owner rotates the key.",
+      "verification": "Rebuild and grep the client bundle for the variable name. Confirm the old key is revoked.",
+      "owner": "Engineering lead"
+    },
+    {
+      "id": "F-02",
+      "controls": [
+        "G2-04",
+        "BE-17"
+      ],
+      "severity": "P1",
+      "status": "NEEDS VERIFICATION",
+      "critical": true,
+      "title": "No restore evidence for the production database",
+      "evidence": "Provider backup page not accessible during audit",
+      "fix": "Restore the latest backup to a disposable non-production database and record the result.",
+      "owner": "Database owner"
+    },
+    {
+      "id": "F-03",
+      "controls": [
+        "G6-12"
+      ],
+      "severity": "P1",
+      "status": "FAIL",
+      "critical": true,
+      "title": "Cron route runs without CRON_SECRET check",
+      "evidence": "app/api/cron/sync/route.ts",
+      "fix": "Return 401 unless the Authorization header equals Bearer CRON_SECRET.",
+      "owner": "Engineering lead"
+    },
+    {
+      "id": "F-04",
+      "controls": [
+        "G4-04"
+      ],
+      "severity": "P2",
+      "status": "FAIL",
+      "critical": false,
+      "title": "Hero image ships at 2.1 MB",
+      "evidence": "public/hero.png",
+      "fix": "Use next/image with a modern format and explicit sizes.",
+      "owner": "Frontend",
+      "due": "2026-11-01"
+    }
+  ],
+  "evidence": [
+    {
+      "check": "G0-03",
+      "observation": "npm test, npm run build",
+      "result": "PASS",
+      "scope": "0123456789ab local",
+      "when": "2026-10-15T11:40:00Z"
+    }
+  ],
+  "not_executed": [
+    {
+      "check": "G6-08",
+      "reason": "Billing dashboard access missing",
+      "next": "Owner exports spend management settings"
+    }
+  ],
+  "owner_actions": [
+    {
+      "control": "BE-07",
+      "scope": "Vercel team, production",
+      "decision_needed": "Approved monthly budget and alert recipients",
+      "approval": "pending",
+      "steps": "Configure Spend Management after approval"
+    }
+  ],
+  "runbook": {
+    "release_mechanism": "Merge to main auto-deploys production",
+    "preview_deployment": "Protected preview for the candidate SHA",
+    "last_known_good": "previous production deployment",
+    "rollback": "Instant Rollback to last known good. Data changes need the separate recovery plan.",
+    "rollback_triggers": [
+      "5xx rate above baseline for 5 minutes",
+      "Login failures",
+      "Any cross-tenant data report"
+    ],
+    "smoke_checks": [
+      "Home returns 200",
+      "Dashboard rejects anonymous request",
+      "Checkout in test mode"
+    ],
+    "monitoring_window": "First 60 minutes after release"
+  }
+}

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Ship read-only offline reconnaissance. Never treats discovered hints as a GO decision.
 
-Python 3.9+. No dependencies, network calls, or project writes.
-The script reports file paths and pattern names, never matched credential values.
+Python 3.10+. No dependencies, network calls, or project writes.
+The script reports file paths, line numbers, variable names, and pattern names, never matched credential values.
 It is not a substitute for tests, threat modeling, Git history scanning, or runtime checks.
+
+Exit codes: 0 completed, 1 a --fail-on condition matched, 2 invalid root.
 """
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -15,20 +18,43 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+VERSION = "1.1.0"
+MAX_LOCAL_FILES = 6000
+MAX_FILE_BYTES = 256_000
 SKIP_DIRS = {
     ".git", ".next", ".nuxt", ".turbo", ".vercel", "node_modules",
     "dist", "build", "coverage", ".venv", "venv", "vendor", ".svelte-kit",
     "__pycache__", ".cache", "target", ".output", "out",
 }
-CODE_EXTENSIONS = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".json", ".yaml", ".yml", ".toml", ".env", ".md", ".txt", ".sh", ".ps1", ".tf", ".ini", ".conf", ".pem", ".key"}
+CODE_EXTENSIONS = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".json", ".yaml", ".yml", ".toml", ".env", ".md", ".txt", ".sh", ".ps1", ".tf", ".ini", ".conf", ".pem", ".key", ".vue", ".svelte", ".astro", ".rb", ".go", ".php"}
+SCANNED_NAMES = {".env", "dockerfile", ".npmrc", ".pypirc"}
+ENV_TEMPLATE_SUFFIXES = (".example", ".sample", ".template", ".dist")
 SECRET_PATTERNS = {
-    "private_key_block": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----"),
-    "aws_access_key_id": re.compile(r"\bAKIA[A-Z0-9]{16}\b"),
+    "private_key_block": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED |DSA )?PRIVATE KEY-----"),
+    "aws_access_key_id": re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
     "github_pat": re.compile(r"\bgithub_pat_[A-Za-z0-9_]{30,}\b"),
-    "github_classic_token": re.compile(r"\bghp_[A-Za-z0-9]{30,}\b"),
+    "github_classic_token": re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
     "stripe_live_secret": re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b"),
+    "stripe_live_restricted": re.compile(r"\brk_live_[A-Za-z0-9]{16,}\b"),
+    "stripe_webhook_secret": re.compile(r"\bwhsec_[A-Za-z0-9]{24,}\b"),
     "slack_bot_token": re.compile(r"\bxoxb-[0-9]{8,}-[0-9]{8,}-[A-Za-z0-9]{12,}\b"),
+    "anthropic_api_key": re.compile(r"\bsk-ant-[a-z]{3,6}\d{2}-[A-Za-z0-9_-]{20,}"),
+    "openai_project_key": re.compile(r"\bsk-(?:proj|svcacct|admin)-[A-Za-z0-9_-]{20,}"),
+    "openai_legacy_key": re.compile(r"\bsk-[A-Za-z0-9]{48}\b"),
+    "google_api_key": re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"),
+    "supabase_secret_key": re.compile(r"\bsb_secret_[A-Za-z0-9_-]{20,}"),
+    "vercel_token_assignment": re.compile(r"\bVERCEL_(?:TOKEN|API_TOKEN)\s*[=:]\s*['\"]?[A-Za-z0-9]{24,}"),
+    "resend_key_assignment": re.compile(r"\bRESEND_API_KEY\s*[=:]\s*['\"]?re_[A-Za-z0-9_]{16,}"),
 }
+PATTERN_NOTES = {
+    "google_api_key": " Firebase web keys are public by design. Verify API and referrer restrictions.",
+}
+JWT = re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.(eyJ[A-Za-z0-9_-]{10,})\.[A-Za-z0-9_-]{10,}")
+PUBLIC_PREFIX = re.compile(
+    r"\b((?:NEXT_PUBLIC|VITE|PUBLIC|EXPO_PUBLIC|NUXT_PUBLIC|REACT_APP|GATSBY)_[A-Z0-9_]*"
+    r"(?:SECRET|SERVICE_ROLE|SERVICE_KEY|PRIVATE|PASSWORD|OPENAI|ANTHROPIC|STRIPE_SECRET|DATABASE_URL|DB_URL)[A-Z0-9_]*)\b"
+)
+VERCEL_DEPENDENCIES = ("vercel", "@vercel/analytics", "@vercel/speed-insights", "@vercel/blob", "@vercel/kv", "@vercel/postgres", "@vercel/edge-config", "@vercel/functions", "@vercel/flags", "@vercel/og")
 
 
 def git(args, root):
@@ -62,7 +88,8 @@ def list_tracked(root):
     return paths
 
 
-def list_local(root, max_files=6000):
+def list_local(root, max_files=MAX_LOCAL_FILES):
+    """Return (paths, truncated)."""
     result = []
     for directory, subdirs, filenames in os.walk(root, followlinks=False):
         subdirs[:] = [d for d in subdirs if d not in SKIP_DIRS and not (Path(directory) / d).is_symlink()]
@@ -71,50 +98,105 @@ def list_local(root, max_files=6000):
             if full.is_file() and not full.is_symlink():
                 result.append(full.relative_to(root))
                 if len(result) >= max_files:
-                    return result
-    return result
+                    return result, True
+    return result, False
 
 
-def has_path(paths, root, variants):
-    return any((root / candidate).is_file() for candidate in variants) or any(str(path).replace("\\", "/") in variants for path in paths)
+def norm(path):
+    return str(path).replace("\\", "/")
 
 
-def exists_near(package_dir, paths):
-    normalized = {str(p).replace("\\", "/") for p in paths}
-    return any(str(package_dir / p).replace("\\", "/") in normalized for p in ("app", "src/app"))
+def read_text(path):
+    try:
+        if path.stat().st_size > MAX_FILE_BYTES:
+            return None
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError, ValueError):
+        return None
 
 
-def asset_in(root, base, filenames):
-    return any((root / base / filename).is_file() for filename in filenames)
+def line_numbers(content, regex):
+    lines = []
+    for match in regex.finditer(content):
+        lines.append(content.count("\n", 0, match.start()) + 1)
+    return sorted(set(lines))
+
+
+def is_env_file(name):
+    return name.startswith(".env")
+
+
+def is_env_template(name):
+    return name.endswith(ENV_TEMPLATE_SUFFIXES)
+
+
+def jwt_service_role_lines(content):
+    lines = []
+    for match in JWT.finditer(content):
+        segment = match.group(1)
+        try:
+            payload = json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
+        except (ValueError, UnicodeError):
+            continue
+        if isinstance(payload, dict) and payload.get("role") == "service_role":
+            lines.append(content.count("\n", 0, match.start()) + 1)
+    return sorted(set(lines))
+
+
+def asset_in(folder, filenames):
+    return any((folder / filename).is_file() for filename in filenames)
 
 
 def metadata_candidates(root, folder):
     app_dirs = [root / folder / "app", root / folder / "src" / "app"]
     public_dirs = [root / folder / "public", root / "public"]
-    checks = {
-        "favicon": any(asset_in(root, folder / p, ["favicon.ico", "icon.png", "icon.svg", "apple-icon.png"]) for p in ("app", "src/app", "public"))
-        or any(asset_in(root, Path("public"), ["favicon.ico", "icon.png", "icon.svg"]) for _ in [0]),
-        "robots": any(any((d / ("robots" + ext)).is_file() for ext in (".txt", ".ts", ".js")) for d in app_dirs)
-        or any((d / "robots.txt").is_file() for d in public_dirs),
-        "sitemap": any(any((d / ("sitemap" + ext)).is_file() for ext in (".xml", ".ts", ".js")) for d in app_dirs)
-        or any((d / "sitemap.xml").is_file() for d in public_dirs),
-        "open_graph": any(any((d / file).is_file() for file in ("opengraph-image.png", "opengraph-image.jpg", "opengraph-image.tsx", "opengraph-image.ts", "opengraph-image.js")) for d in app_dirs)
-        or any((d / file).is_file() for d in public_dirs for file in ("og.png", "og.jpg", "og-image.png", "og-image.jpg")),
+    return {
+        "favicon": any(asset_in(d, ["favicon.ico", "icon.png", "icon.svg", "apple-icon.png", "icon.tsx", "icon.ts"]) for d in app_dirs + public_dirs),
+        "robots": any(asset_in(d, ["robots.txt", "robots.ts", "robots.js"]) for d in app_dirs) or any((d / "robots.txt").is_file() for d in public_dirs),
+        "sitemap": any(asset_in(d, ["sitemap.xml", "sitemap.ts", "sitemap.js"]) for d in app_dirs) or any((d / "sitemap.xml").is_file() for d in public_dirs),
+        "open_graph": any(asset_in(d, ["opengraph-image.png", "opengraph-image.jpg", "opengraph-image.tsx", "opengraph-image.ts", "opengraph-image.js"]) for d in app_dirs)
+        or any(asset_in(d, ["og.png", "og.jpg", "og-image.png", "og-image.jpg"]) for d in public_dirs),
     }
-    return checks
+
+
+def cron_route_candidates(base, cron_path):
+    """Map a vercel.json cron path to likely route handler files."""
+    clean = cron_path.split("?")[0].strip("/")
+    if not clean:
+        return []
+    candidates = []
+    for app in ("app", "src/app"):
+        for ext in ("ts", "js", "mjs", "tsx"):
+            candidates.append(base / app / clean / f"route.{ext}")
+    for pages in ("pages", "src/pages"):
+        for ext in ("ts", "js", "mjs"):
+            candidates.append(base / pages / f"{clean}.{ext}")
+            candidates.append(base / pages / clean / f"index.{ext}")
+    for ext in ("ts", "js", "mjs", "py", "go"):
+        candidates.append(base / f"{clean}.{ext}")
+    return candidates
 
 
 def inspect(root):
     tracked = list_tracked(root)
-    candidate_paths = tracked if tracked is not None else list_local(root)
-    files = {str(p).replace("\\", "/") for p in candidate_paths}
+    truncated = False
+    if tracked is not None:
+        candidate_paths = tracked
+    else:
+        candidate_paths, truncated = list_local(root)
+    files = {norm(p) for p in candidate_paths}
     findings = []
     packages = []
+    vercel_signals = []
 
-    def note(key, level, detail, path=None):
+    def note(key, level, detail, path=None, lines=None, kind=None):
         item = {"id": key, "level": level, "detail": detail}
         if path:
-            item["path"] = str(path).replace("\\", "/")
+            item["path"] = norm(path)
+        if lines:
+            item["lines"] = lines
+        if kind:
+            item["kind"] = kind
         findings.append(item)
 
     sha_bytes = git(["rev-parse", "HEAD"], root)
@@ -125,6 +207,8 @@ def inspect(root):
         note("G0-01", "INFO", f"Git revision captured. Working tree entries changed: {dirty_count}.")
     else:
         note("G0-01", "REVIEW", "Git revision unavailable. Record exact production candidate identity.")
+    if truncated:
+        note("G0-01", "REVIEW", f"Local scan stopped at {MAX_LOCAL_FILES} files. Results are partial. Run inside a Git checkout for a tracked-file scan.", kind="scan_truncated")
 
     ci = any(p.startswith(".github/workflows/") or p.startswith(".gitlab/") for p in files) or any(
         (root / p).is_file() for p in ("bitbucket-pipelines.yml", ".gitlab-ci.yml", "azure-pipelines.yml")
@@ -149,6 +233,11 @@ def inspect(root):
             "framework_candidates": framework,
             "available_scripts": [x for x in ("build", "test", "lint", "typecheck", "check", "e2e", "test:e2e") if x in scripts],
         })
+        vercel_deps = [name for name in VERCEL_DEPENDENCIES if name in deps]
+        if vercel_deps:
+            vercel_signals.append(f"{path_str} depends on {', '.join(vercel_deps)}")
+        if any(re.search(r"(^|\s)vercel(\s|$)", str(command)) for command in scripts.values()):
+            vercel_signals.append(f"{path_str} scripts invoke the Vercel CLI")
         if "next" in deps:
             hints = metadata_candidates(root, path.parent)
             for key, found in hints.items():
@@ -159,24 +248,50 @@ def inspect(root):
 
     dangerous_files = []
     for rel in candidate_paths:
-        path_str = str(rel).replace("\\", "/")
+        path_str = norm(rel)
         base = rel.name.lower()
-        if tracked is not None and base.startswith(".env") and not base.endswith((".example", ".sample", ".template", ".dist")):
+        env_file = is_env_file(base)
+        if tracked is not None and env_file and not is_env_template(base):
             dangerous_files.append(path_str)
-        if not rel.suffix.lower() in CODE_EXTENSIONS and base not in (".env", "dockerfile", ".npmrc", ".pypirc"):
+        if rel.suffix.lower() not in CODE_EXTENSIONS and base not in SCANNED_NAMES and not env_file:
             continue
-        full = root / rel
-        try:
-            if full.stat().st_size > 256_000:
-                continue
-            content = full.read_text(encoding="utf-8")
-        except (OSError, UnicodeError, ValueError):
+        content = read_text(root / rel)
+        if content is None:
             continue
-        for label, regex in SECRET_PATTERNS.items():
-            if regex.search(content):
-                note("G1-01", "REVIEW", f"High-confidence {label} pattern found in source. Inspect privately and check history. No credential contents shown.", path_str)
+        # An untracked local env file is expected to hold secrets. Tracked or source files are not.
+        check_values = tracked is not None or not env_file
+        if check_values:
+            for label, regex in SECRET_PATTERNS.items():
+                lines = line_numbers(content, regex)
+                if lines:
+                    note("G1-01", "REVIEW", f"High-confidence {label} pattern found. Inspect privately and check history. No credential contents shown.{PATTERN_NOTES.get(label, '')}", path_str, lines, "secret")
+            jwt_lines = jwt_service_role_lines(content)
+            if jwt_lines:
+                note("G1-01", "REVIEW", "JWT with role service_role found. A Supabase service-role key bypasses row-level security. Inspect privately and check history.", path_str, jwt_lines, "secret")
+        public_names = sorted({m.group(1) for m in PUBLIC_PREFIX.finditer(content)})
+        if public_names:
+            note("G1-01", "REVIEW", "Client-exposed variable name suggests a private credential. Public prefixes are inlined into browser bundles: " + ", ".join(public_names) + ".", path_str, line_numbers(content, PUBLIC_PREFIX), "public_secret_name")
     if dangerous_files:
-        note("G1-01", "REVIEW", f"Environment files are tracked. Review {len(dangerous_files)} file(s) privately, including template exceptions.")
+        note("G1-01", "REVIEW", f"Environment files are tracked. Review {len(dangerous_files)} file(s) privately, including template exceptions.", kind="tracked_env")
+
+    # Untracked local env files never reach Git, but public-prefixed names still reach the browser bundle.
+    if tracked is not None:
+        seen = set(files)
+        for folder in {root} | {root / Path(p["path"]).parent for p in packages}:
+            try:
+                entries = list(folder.iterdir())
+            except OSError:
+                continue
+            for entry in entries:
+                rel = norm(entry.relative_to(root))
+                if rel in seen or not entry.is_file() or not is_env_file(entry.name.lower()) or is_env_template(entry.name.lower()):
+                    continue
+                content = read_text(entry)
+                if content is None:
+                    continue
+                names = sorted({m.group(1) for m in PUBLIC_PREFIX.finditer(content)})
+                if names:
+                    note("G1-01", "REVIEW", "Local env file defines client-exposed names suggesting a private credential: " + ", ".join(names) + ". Check the same names in provider environment settings.", rel, line_numbers(content, PUBLIC_PREFIX), "public_secret_name")
 
     if not any(p in files for p in ("package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lock", "bun.lockb", "uv.lock", "poetry.lock", "Pipfile.lock", "Cargo.lock", "go.sum")):
         note("G0-04", "REVIEW", "No recognized dependency lockfile in tracked files. Check language-specific dependency policy.")
@@ -184,20 +299,54 @@ def inspect(root):
     if not (root / "README.md").is_file():
         note("G0-07", "REVIEW", "Top-level README.md not found. Confirm operational documentation location.")
 
-    if not any(p in files for p in ("vercel.json", ".vercel/project.json")):
-        note("G6-01", "INFO", "Vercel not confirmed from conventional local configuration. Verify hosting externally.")
+    vercel_configs = sorted(p for p in files if p.split("/")[-1] in ("vercel.json", "vercel.ts"))
+    if vercel_configs:
+        vercel_signals.append("config: " + ", ".join(vercel_configs))
+    if (root / ".vercel" / "project.json").is_file():
+        vercel_signals.append("local .vercel/project.json link")
+    if any(p.startswith(".github/workflows/") and "vercel" in (read_text(root / p) or "").lower() for p in files):
+        vercel_signals.append("CI workflow references Vercel")
+    if vercel_signals:
+        note("G6-01", "INFO", "Vercel hosting candidate: " + "; ".join(vercel_signals) + ". Confirm project, production branch, and deployment protection with the provider.", kind="vercel_detected")
     else:
-        note("G6-01", "INFO", "Vercel configuration candidate found. Confirm project and deployment protection in provider dashboard.")
+        note("G6-01", "INFO", "Vercel not detected from config, dependencies, scripts, link, or CI. Verify hosting externally.")
+
+    for config in (p for p in vercel_configs if p.endswith(".json")):
+        try:
+            data = json.loads((root / config).read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            note("G6-09", "REVIEW", "vercel.json unreadable. Verify cron and function configuration manually.", config)
+            continue
+        crons = data.get("crons") if isinstance(data, dict) else None
+        if not isinstance(crons, list):
+            continue
+        base = root / Path(config).parent
+        for cron in crons:
+            cron_path = cron.get("path") if isinstance(cron, dict) else None
+            if not isinstance(cron_path, str):
+                continue
+            handlers = [c for c in cron_route_candidates(base, cron_path) if c.is_file()]
+            if not handlers:
+                note("G6-12", "REVIEW", f"Cron path {cron_path} has no conventional handler file. Verify the handler checks CRON_SECRET.", config, kind="cron_auth")
+                continue
+            for handler in handlers:
+                text = read_text(handler) or ""
+                rel = norm(handler.relative_to(root))
+                if "CRON_SECRET" in text:
+                    note("G6-12", "INFO", f"Cron handler for {cron_path} references CRON_SECRET. Verify a missing or wrong header returns 401.", rel, kind="cron_auth")
+                else:
+                    note("G6-12", "REVIEW", f"Cron handler for {cron_path} does not reference CRON_SECRET. Vercel cron paths are public URLs. Anyone can trigger this job.", rel, kind="cron_auth")
 
     return {
         "tool": "ship-offline-preflight",
-        "version": "1.0.0",
+        "version": VERSION,
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "root": str(root),
         "git_sha": sha,
         "git_changed_entries": dirty_count,
         "inspected_files": len(candidate_paths),
         "scope": "Tracked files only" if tracked is not None else "Local files (Git unavailable)",
+        "truncated": truncated,
         "packages": packages,
         "findings": findings,
         "critical_limitations": [
@@ -209,18 +358,51 @@ def inspect(root):
     }
 
 
+def render_text(result, kinds=None):
+    lines = [f"ship preflight {result['version']} | {result['scope']} | {result['inspected_files']} files | sha {result['git_sha'] or 'unknown'}"]
+    for f in result["findings"]:
+        if kinds and f.get("kind") not in kinds:
+            continue
+        where = f.get("path", "")
+        if f.get("lines"):
+            where += ":" + ",".join(str(n) for n in f["lines"][:10])
+        lines.append(f"{f['level']:6} {f['id']:6} {where} {f['detail']}".rstrip())
+    lines.append("Hints only. Not a PASS or GO verdict.")
+    return "\n".join(lines)
+
+
+def should_fail(result, fail_on):
+    if fail_on == "none":
+        return False
+    if fail_on == "secret":
+        return any(f.get("kind") in ("secret", "public_secret_name", "tracked_env") for f in result["findings"])
+    return any(f["level"] == "REVIEW" for f in result["findings"])
+
+
 def main():
     parser = argparse.ArgumentParser(description="Offline release-check hints, no production actions")
     parser.add_argument("--root", default=".", help="Project directory")
     parser.add_argument("--compact", action="store_true", help="Compact JSON output")
+    parser.add_argument("--fail-on", choices=("none", "secret", "review"), default="none",
+                        help="Exit 1 when secret-like findings (secret) or any REVIEW finding (review) exist")
+    parser.add_argument("--format", choices=("json", "text"), default="json", help="JSON for agents, text for terminals and Git hooks")
+    parser.add_argument("--only-kinds", help="Comma-separated finding kinds to print in text format, for example secret,public_secret_name")
     args = parser.parse_args()
     root = Path(args.root).expanduser().resolve()
     if not root.is_dir():
         print("Project directory not found.", file=sys.stderr)
         return 2
     result = inspect(root)
-    print(json.dumps(result, indent=None if args.compact else 2, sort_keys=True))
-    return 0
+    result["fail_on"] = args.fail_on
+    failed = should_fail(result, args.fail_on)
+    result["fail_on_matched"] = failed
+    if args.format == "text":
+        print(render_text(result, args.only_kinds.split(",") if args.only_kinds else None))
+    else:
+        print(json.dumps(result, indent=None if args.compact else 2, sort_keys=True))
+    if failed:
+        print(f"preflight: --fail-on {args.fail_on} matched. Review the findings above.", file=sys.stderr)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

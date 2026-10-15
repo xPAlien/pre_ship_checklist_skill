@@ -1,4 +1,4 @@
-# Ship Audit Checklist | v0.3.0
+# Ship Audit Checklist | v0.5.0
 
 Every check needs a status, evidence source, and an owner when unresolved. `NOT APPLICABLE` needs an explicit project-specific reason. These are evaluation requirements, not instructions to install every third-party service.
 
@@ -113,6 +113,7 @@ Every check needs a status, evidence source, and an owner when unresolved. `NOT 
 | G6-09 | Verify cron schedules, scheduled tasks, queues, and background workers use correct production identity and idempotency. | Job config and non-production tests |
 | G6-10 | Confirm third-party integrations and vendor service status, with timeouts and failure paths. | Sandbox/runtime tests |
 | G6-11 | Set up monitoring for functional health and field performance where justified. Analytics is optional when incompatible with privacy or business needs. | Dashboard and events observed |
+| G6-12 | Scheduled endpoints authenticate their caller. On Vercel, every cron handler rejects requests without `Authorization: Bearer ${CRON_SECRET}` and fails closed when the secret is unset. | Handler code, negative request against preview |
 
 ## G7 | Controlled cutover and post-release response
 
@@ -127,6 +128,8 @@ Every check needs a status, evidence source, and an owner when unresolved. `NOT 
 | G7-07 | Obtain explicit final release authorization for named domain, SHA, environment, and action. | Approval record |
 | G7-08 | Following approval and deployment, validate the actual production revision, protected routes, key flows, logs, and alerts. | Live observations with time |
 | G7-09 | Record any exceptions, incident follow-ups, rollback outcome, and whether branch/domain auto-assignment needs restoration. | Final release record |
+| G7-10 | Choose progressive delivery for risky releases where the host supports it, such as Vercel Rolling Releases, with agreed stages, abort signal, and abort owner. Protect clients from version skew between deployments. | Rollout config, skew protection setting, abort plan |
+| G7-11 | Automated tests reach protected previews through a scoped bypass secret held in CI, never by removing deployment protection or exposing the secret. | CI configuration and protection settings, values redacted |
 
 ## Release severity examples
 
